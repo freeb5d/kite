@@ -2,6 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"time"
 
 	"github.com/freeb5d/kite/internal/profile"
 	"github.com/freeb5d/kite/internal/system"
@@ -93,6 +98,49 @@ func (a *App) Disconnect() error {
 
 func (a *App) Status() xray.Status {
 	return a.manager.Status()
+}
+
+// TestConnection makes an actual HTTP request through the local xray HTTP
+// inbound so a "running" status that isn't really routing traffic (bad
+// outbound handshake, unreachable server, etc.) surfaces a concrete error
+// instead of looking like nothing is wrong.
+func (a *App) TestConnection() (string, error) {
+	if a.manager.Status().State != xray.StateRunning {
+		return "", fmt.Errorf("not connected")
+	}
+
+	proxyURL, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", xray.HTTPInboundPort))
+	client := &http.Client{
+		Timeout:   10 * time.Second,
+		Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)},
+	}
+
+	const testURL = "https://cp.cloudflare.com/generate_204"
+	resp, err := client.Get(testURL)
+	if err != nil {
+		return "", fmt.Errorf("request through proxy failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	return fmt.Sprintf("OK (%s -> HTTP %d)", testURL, resp.StatusCode), nil
+}
+
+// RecentLog returns the tail of xray-core's own error log, for diagnosing a
+// connection that reports "running" but isn't actually routing traffic.
+func (a *App) RecentLog() (string, error) {
+	data, err := os.ReadFile(xray.LogFilePath())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+
+	const maxBytes = 8000
+	if len(data) > maxBytes {
+		data = data[len(data)-maxBytes:]
+	}
+	return string(data), nil
 }
 
 // version is set at build time via -ldflags "-X main.version=v1.2.3"

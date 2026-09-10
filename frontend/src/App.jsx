@@ -10,6 +10,8 @@ import {
   Disconnect,
   Status,
   Version,
+  TestConnection,
+  RecentLog,
 } from '../wailsjs/go/main/App'
 
 function errorText(err) {
@@ -28,6 +30,10 @@ export default function App() {
   const [version, setVersion] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editingName, setEditingName] = useState('')
+  const [testResult, setTestResult] = useState(null)
+  const [testing, setTesting] = useState(false)
+  const [log, setLog] = useState('')
+  const [showLog, setShowLog] = useState(false)
 
   useEffect(() => {
     ListProfiles().then(setServers).catch((err) => setError(errorText(err)))
@@ -49,10 +55,12 @@ export default function App() {
 
   async function handleConnect(id) {
     setError('')
+    setTestResult(null)
     setConnectingId(id)
     try {
       await Connect(id)
       setStatus(await Status())
+      handleTest()
     } catch (err) {
       setError(errorText(err))
       setStatus(await Status().catch(() => ({ state: 'stopped' })))
@@ -63,11 +71,34 @@ export default function App() {
 
   async function handleDisconnect() {
     setError('')
+    setTestResult(null)
     try {
       await Disconnect()
       setStatus(await Status())
     } catch (err) {
       setError(errorText(err))
+    }
+  }
+
+  async function handleTest() {
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const result = await TestConnection()
+      setTestResult({ ok: true, text: result })
+    } catch (err) {
+      setTestResult({ ok: false, text: errorText(err) })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  async function handleShowLog() {
+    setShowLog((prev) => !prev)
+    try {
+      setLog(await RecentLog())
+    } catch (err) {
+      setLog(errorText(err))
     }
   }
 
@@ -121,9 +152,21 @@ export default function App() {
       <div className="mb-4 text-sm text-neutral-400">
         Status: <span className="font-medium text-neutral-200">{status.state}</span>
         {status.state === 'running' && (
-          <button className="ml-3 text-red-400 hover:text-red-300" onClick={handleDisconnect}>
-            Disconnect
-          </button>
+          <>
+            <button className="ml-3 text-red-400 hover:text-red-300" onClick={handleDisconnect}>
+              Disconnect
+            </button>
+            <button
+              className="ml-3 text-neutral-300 hover:text-neutral-100 disabled:opacity-50"
+              disabled={testing}
+              onClick={handleTest}
+            >
+              {testing ? 'Testing…' : 'Test'}
+            </button>
+            <button className="ml-3 text-neutral-300 hover:text-neutral-100" onClick={handleShowLog}>
+              {showLog ? 'Hide log' : 'Show log'}
+            </button>
+          </>
         )}
       </div>
 
@@ -131,6 +174,25 @@ export default function App() {
         <div className="mb-4 rounded border border-red-800 bg-red-950 px-3 py-2 text-sm text-red-300 break-words">
           {error}
         </div>
+      )}
+
+      {testResult && (
+        <div
+          className={`mb-4 rounded border px-3 py-2 text-sm break-words ${
+            testResult.ok
+              ? 'border-emerald-800 bg-emerald-950 text-emerald-300'
+              : 'border-red-800 bg-red-950 text-red-300'
+          }`}
+        >
+          {testResult.ok ? '✓ ' : '✗ '}
+          {testResult.text}
+        </div>
+      )}
+
+      {showLog && (
+        <pre className="mb-4 max-h-64 overflow-auto rounded border border-neutral-800 bg-neutral-950 p-2 text-xs text-neutral-400 whitespace-pre-wrap break-all">
+          {log || '(log is empty)'}
+        </pre>
       )}
 
       <ul className="space-y-2">

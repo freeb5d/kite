@@ -3,6 +3,8 @@ package xray
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/freeb5d/kite/internal/profile"
 	"github.com/xtls/xray-core/core"
@@ -13,6 +15,19 @@ const (
 	HTTPInboundPort  = 2080
 	SOCKSInboundPort = 2081
 )
+
+// LogFilePath returns where xray-core's own error log is written, so it can
+// be surfaced in the UI when a connection silently fails to actually route
+// traffic (started fine, but the outbound handshake/dial is failing).
+func LogFilePath() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		dir = "."
+	}
+	logDir := filepath.Join(dir, "kite", "logs")
+	_ = os.MkdirAll(logDir, 0o700)
+	return filepath.Join(logDir, "xray.log")
+}
 
 // BuildConfig turns a saved server profile into a *core.Config by building
 // the standard Xray JSON config shape and running it through xray-core's
@@ -44,7 +59,10 @@ func buildJSON(server profile.Server) ([]byte, error) {
 	}
 
 	config := map[string]interface{}{
-		"log": map[string]interface{}{"loglevel": "warning"},
+		"log": map[string]interface{}{
+			"loglevel": "debug",
+			"error":    LogFilePath(),
+		},
 		"inbounds": []map[string]interface{}{
 			{
 				"tag":      "http-in",
