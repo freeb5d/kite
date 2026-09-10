@@ -176,7 +176,13 @@ func streamSettings(server profile.Server) map[string]interface{} {
 		if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"]); sni != "" {
 			tlsSettings["serverName"] = sni
 		}
-		if alpn := server.Extra["alpn"]; alpn != "" {
+		// alpn is skipped for ws/websocket: the WS transport shares its
+		// tls.Config with net/http, and an alpn list that includes "h2"
+		// makes Go negotiate HTTP/2 instead of the plain WS upgrade,
+		// failing every dial with `websocket: protocol "h2" was given
+		// but is not supported`. ws requires http/1.1 semantics anyway,
+		// so there's nothing useful alpn would add here.
+		if alpn := server.Extra["alpn"]; alpn != "" && network != "ws" && network != "websocket" {
 			tlsSettings["alpn"] = alpn
 		}
 		if fp := server.Extra["fp"]; fp != "" {
