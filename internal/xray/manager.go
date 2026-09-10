@@ -8,6 +8,13 @@ import (
 	"sync"
 
 	"github.com/freeb5d/kite/internal/profile"
+	"github.com/xtls/xray-core/core"
+
+	// Registers every protocol/transport xray-core ships (vmess, vless,
+	// trojan, shadowsocks, http/socks inbounds, ws/tls, ...) with the
+	// config loaders used by BuildConfig. Without this blank import,
+	// core.New fails with "unknown protocol" for everything.
+	_ "github.com/xtls/xray-core/main/distro/all"
 )
 
 type State string
@@ -27,11 +34,9 @@ type Status struct {
 
 // Manager owns the lifecycle of a single running xray-core instance.
 type Manager struct {
-	mu     sync.Mutex
-	status Status
-	// instance will hold the running *core.Instance from xray-core once
-	// config.go builds a real config and startup wires it in.
-	instance interface{}
+	mu       sync.Mutex
+	status   Status
+	instance *core.Instance
 }
 
 func NewManager() *Manager {
@@ -46,15 +51,24 @@ func (m *Manager) Start(server profile.Server) error {
 		return errors.New("xray is already running; call Stop or Restart first")
 	}
 
-	cfg, err := BuildConfig(server)
+	pbConfig, err := BuildConfig(server)
 	if err != nil {
 		m.status = Status{State: StateError, Message: err.Error()}
 		return err
 	}
 
-	// TODO: instantiate xray-core with cfg and keep the handle in m.instance.
-	_ = cfg
+	instance, err := core.New(pbConfig)
+	if err != nil {
+		m.status = Status{State: StateError, Message: err.Error()}
+		return err
+	}
 
+	if err := instance.Start(); err != nil {
+		m.status = Status{State: StateError, Message: err.Error()}
+		return err
+	}
+
+	m.instance = instance
 	m.status = Status{State: StateRunning, Server: server.Name}
 	return nil
 }
@@ -63,15 +77,15 @@ func (m *Manager) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.status.State != StateRunning {
+	if m.instance == nil {
 		m.status = Status{State: StateStopped}
 		return nil
 	}
 
-	// TODO: close m.instance cleanly.
+	err := m.instance.Close()
 	m.instance = nil
 	m.status = Status{State: StateStopped}
-	return nil
+	return err
 }
 
 func (m *Manager) Restart(server profile.Server) error {

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/freeb5d/kite/internal/profile"
+	"github.com/freeb5d/kite/internal/system"
 	"github.com/freeb5d/kite/internal/xray"
 )
 
@@ -26,11 +27,13 @@ func (a *App) startup(ctx context.Context) {
 	a.manager = xray.NewManager()
 }
 
-// shutdown runs when the app is closing; make sure xray is stopped cleanly.
+// shutdown runs when the app is closing; make sure xray is stopped and the
+// system proxy is restored to direct.
 func (a *App) shutdown(ctx context.Context) {
 	if a.manager != nil {
 		a.manager.Stop()
 	}
+	_ = system.ClearProxy()
 }
 
 // --- Server profile methods (bound to frontend) ---
@@ -61,10 +64,18 @@ func (a *App) Connect(serverID string) error {
 	if err != nil {
 		return err
 	}
-	return a.manager.Start(server)
+	if err := a.manager.Start(server); err != nil {
+		return err
+	}
+	if err := system.SetProxy("127.0.0.1", xray.HTTPInboundPort); err != nil {
+		_ = a.manager.Stop()
+		return err
+	}
+	return nil
 }
 
 func (a *App) Disconnect() error {
+	_ = system.ClearProxy()
 	return a.manager.Stop()
 }
 

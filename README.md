@@ -39,14 +39,16 @@ wails dev             # generates frontend/wailsjs/*, starts the dev app with ho
   (run `go mod tidy` to generate `go.sum`).
 - [main.go](main.go) / [app.go](app.go) — Wails entrypoint and the bound `App` struct
   (Go methods callable from the frontend).
-- [internal/xray](internal/xray) — `Manager` (start/stop/restart lifecycle),
-  `BuildConfig` (profile → xray-core config), `Traffic` (stats). The actual
-  xray-core instance wiring is stubbed with `TODO`s pending `go mod tidy`.
+- [internal/xray](internal/xray) — `Manager` (start/stop/restart an actual
+  `core.Instance`), `BuildConfig` (profile → standard Xray JSON config →
+  `conf.Config.Build()` → `*core.Config`, the same path xray-core itself uses
+  to load a config file), `Traffic` (stats — still a stub, see below).
 - [internal/profile](internal/profile) — link parsers for `vmess://`, `vless://`,
   `trojan://`, `ss://`, and a flat JSON file store under the OS config dir.
 - [internal/system](internal/system) — per-OS system HTTP/SOCKS proxy toggling
   (`proxy_windows.go` via `netsh winhttp`, `proxy_darwin.go` via `networksetup`,
-  `proxy_linux.go` via `gsettings`). Not yet wired into `Connect`/`Disconnect`.
+  `proxy_linux.go` via `gsettings`), wired into `App.Connect`/`Disconnect` in
+  [app.go](app.go).
 - [frontend/](frontend) — Vite + React + Tailwind, with a minimal `App.jsx` UI:
   add a share link, list servers, connect/disconnect, status display.
 - [wails.json](wails.json) — tells the Wails CLI how to build the frontend.
@@ -64,8 +66,14 @@ git push origin v0.1.0
 
 ## Known gaps / next steps
 
-- `internal/system` proxy calls aren't called from `App.Connect`/`Disconnect` yet.
-- `internal/xray/manager.go` doesn't actually start an xray-core instance yet —
-  `BuildConfig` produces a placeholder `Config` type, not real xray-core conf types.
+- `internal/xray/stats.go`'s `Traffic()` is still a stub — needs to read from
+  the running instance's `StatsManager` (via `app/stats/command` or
+  `features/stats`) instead of returning zero.
+- Linux system proxy only covers GNOME (`gsettings`); other DEs need their
+  own backend.
 - No tests yet.
 - TUN mode is deliberately out of scope for phase 1 (system proxy only).
+- `go.sum` isn't committed — first `go mod tidy` on a machine with Go
+  installed (or the CI run) resolves and locks the real dependency versions,
+  which pulls in xray-core's full dependency tree (`main/distro/all` is
+  blank-imported to register every protocol/transport it supports).

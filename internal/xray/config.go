@@ -1,45 +1,152 @@
 package xray
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/freeb5d/kite/internal/profile"
+	"github.com/xtls/xray-core/core"
+	"github.com/xtls/xray-core/infra/conf"
 )
 
-// Config is a minimal stand-in for the real xray-core JSON config
-// (inbounds/outbounds/routing). It will be replaced with the actual
-// xray-core conf types once the dependency is wired in with `go mod tidy`.
-type Config struct {
-	Inbounds  []Inbound  `json:"inbounds"`
-	Outbounds []Outbound `json:"outbounds"`
-}
+const (
+	HTTPInboundPort  = 2080
+	SOCKSInboundPort = 2081
+)
 
-type Inbound struct {
-	Tag      string `json:"tag"`
-	Protocol string `json:"protocol"` // "http" or "socks"
-	Port     int    `json:"port"`
-}
-
-type Outbound struct {
-	Tag      string      `json:"tag"`
-	Protocol string      `json:"protocol"` // vmess, vless, trojan, shadowsocks
-	Settings interface{} `json:"settings"`
-}
-
-// BuildConfig turns a saved server profile into an xray-core config with a
-// local HTTP/SOCKS inbound (phase 1: system proxy only, no TUN).
-func BuildConfig(server profile.Server) (*Config, error) {
-	if server.Protocol == "" {
-		return nil, fmt.Errorf("server %q has no protocol set", server.Name)
+// BuildConfig turns a saved server profile into a *core.Config by building
+// the standard Xray JSON config shape and running it through xray-core's
+// own conf.Config loader — the same path xray-core uses when loading a
+// config file from disk, so every protocol/transport it understands is
+// supported without us re-implementing its internal proto types.
+func BuildConfig(server profile.Server) (*core.Config, error) {
+	raw, err := buildJSON(server)
+	if err != nil {
+		return nil, err
 	}
 
-	return &Config{
-		Inbounds: []Inbound{
-			{Tag: "http-in", Protocol: "http", Port: 2080},
-			{Tag: "socks-in", Protocol: "socks", Port: 2081},
+	var jsonConfig conf.Config
+	if err := json.Unmarshal(raw, &jsonConfig); err != nil {
+		return nil, fmt.Errorf("invalid generated xray config: %w", err)
+	}
+
+	pbConfig, err := jsonConfig.Build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build xray config: %w", err)
+	}
+	return pbConfig, nil
+}
+
+func buildJSON(server profile.Server) ([]byte, error) {
+	outbound, err := outboundSettings(server)
+	if err != nil {
+		return nil, err
+	}
+
+	config := map[string]interface{}{
+		"log": map[string]interface{}{"loglevel": "warning"},
+		"inbounds": []map[string]interface{}{
+			{
+				"tag":      "http-in",
+				"protocol": "http",
+				"listen":   "127.0.0.1",
+				"port":     HTTPInboundPort,
+			},
+			{
+				"tag":      "socks-in",
+				"protocol": "socks",
+				"listen":   "127.0.0.1",
+				"port":     SOCKSInboundPort,
+				"settings": map[string]interface{}{"udp": true},
+			},
 		},
-		Outbounds: []Outbound{
-			{Tag: "proxy", Protocol: server.Protocol, Settings: server},
+		"outbounds": []map[string]interface{}{
+			{
+				"tag":            "proxy",
+				"protocol":       server.Protocol,
+				"settings":       outbound,
+				"streamSettings": streamSettings(server),
+			},
+			{
+				"tag":      "direct",
+				"protocol": "freedom",
+			},
 		},
-	}, nil
+	}
+
+	return json.Marshal(config)
+}
+
+// outboundSettings builds the protocol-specific "settings" object matching
+// the field names each of conf.VMessOutboundConfig / conf.VLessOutboundConfig /
+// conf.TrojanClientConfig / conf.ShadowsocksClientConfig expects.
+func outboundSettings(server profile.Server) (map[string]interface{}, error) {
+	switch server.Protocol {
+	case "vmess":
+		return map[string]interface{}{
+			"address":  server.Address,
+			"port":     server.Port,
+			"id":       server.UUID,
+			"security": firstNonEmpty(server.Extra["security"], "auto"),
+		}, nil
+	case "vless":
+		return map[string]interface{}{
+			"address":    server.Address,
+			"port":       server.Port,
+			"id":         server.UUID,
+			"encryption": firstNonEmpty(server.Extra["encryption"], "none"),
+			"flow":       server.Extra["flow"],
+		}, nil
+	case "trojan":
+		return map[string]interface{}{
+			"address":  server.Address,
+			"port":     server.Port,
+			"password": server.Password,
+		}, nil
+	case "shadowsocks":
+		return map[string]interface{}{
+			"address":  server.Address,
+			"port":     server.Port,
+			"method":   server.Method,
+			"password": server.Password,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported protocol %q", server.Protocol)
+	}
+}
+
+// streamSettings builds the "streamSettings" object (network + optional TLS)
+// from the extra fields captured while parsing the share link.
+func streamSettings(server profile.Server) map[string]interface{} {
+	network := firstNonEmpty(server.Extra["network"], "tcp")
+	settings := map[string]interface{}{"network": network}
+
+	if tls := server.Extra["tls"]; tls == "tls" || tls == "reality" {
+		settings["security"] = "tls"
+		tlsSettings := map[string]interface{}{"allowInsecure": false}
+		if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"]); sni != "" {
+			tlsSettings["serverName"] = sni
+		}
+		settings["tlsSettings"] = tlsSettings
+	}
+
+	switch network {
+	case "ws", "websocket":
+		ws := map[string]interface{}{"path": firstNonEmpty(server.Extra["path"], "/")}
+		if host := server.Extra["host"]; host != "" {
+			ws["headers"] = map[string]interface{}{"Host": host}
+		}
+		settings["wsSettings"] = ws
+	}
+
+	return settings
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
