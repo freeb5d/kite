@@ -35,6 +35,12 @@ function openExternal(url) {
   }
 }
 
+function flagEmoji(countryCode) {
+  if (!countryCode || countryCode.length !== 2) return ''
+  const codePoints = [...countryCode.toUpperCase()].map((c) => 0x1f1e6 + (c.charCodeAt(0) - 65))
+  return String.fromCodePoint(...codePoints)
+}
+
 function Icon({ path, className = 'w-5 h-5' }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -247,7 +253,7 @@ export default function App() {
     setTestResult(null)
     try {
       const result = await TestConnection()
-      setTestResult({ ok: true, text: result })
+      setTestResult({ ok: true, ...result })
     } catch (err) {
       setTestResult({ ok: false, text: errorText(err) })
     } finally {
@@ -555,16 +561,18 @@ export default function App() {
                 {error}
               </div>
             )}
-            {testResult && (
-              <div
-                className={`rounded-lg border px-3 py-2 text-xs break-words ${
-                  testResult.ok
-                    ? 'border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success)]'
-                    : 'border-[var(--danger-border)] bg-[var(--danger-bg)] text-[var(--danger)]'
-                }`}
-              >
-                {testResult.ok ? '✓ ' : '✗ '}
-                {testResult.text}
+            {testResult && testResult.ok && (
+              <div className="rounded-lg border border-[var(--success-border)] bg-[var(--success-bg)] px-3 py-2 text-xs text-[var(--success)] flex items-center justify-center gap-2">
+                <span className="text-base leading-none">{flagEmoji(testResult.country)}</span>
+                <span className="font-medium">{testResult.ip}</span>
+                {testResult.country && <span className="text-[var(--success)]/70">{testResult.country}</span>}
+                <span className="text-[var(--success)]/70">·</span>
+                <span>{testResult.delayMs}ms</span>
+              </div>
+            )}
+            {testResult && !testResult.ok && (
+              <div className="rounded-lg border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3 py-2 text-xs text-[var(--danger)] break-words">
+                ✗ {testResult.text}
               </div>
             )}
           </div>

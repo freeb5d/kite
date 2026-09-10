@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	goruntime "runtime"
+	"strings"
 	"time"
 
 	"github.com/freeb5d/kite/internal/profile"
@@ -149,13 +151,26 @@ func (a *App) RestartElevated() error {
 	return nil
 }
 
+// TestResult is what the Test button reports: the exit IP the target site
+// actually sees (i.e. the VPN server's IP, not Kite's), the two-letter
+// country code Cloudflare's edge resolved it to, and the real round-trip
+// time of the whole request (DNS/TCP/TLS/HTTP) made through the tunnel.
+type TestResult struct {
+	IP      string `json:"ip"`
+	Country string `json:"country"`
+	DelayMs int64  `json:"delayMs"`
+}
+
 // TestConnection makes an actual HTTP request through the local xray HTTP
 // inbound so a "running" status that isn't really routing traffic (bad
 // outbound handshake, unreachable server, etc.) surfaces a concrete error
-// instead of looking like nothing is wrong.
-func (a *App) TestConnection() (string, error) {
+// instead of looking like nothing is wrong. It hits Cloudflare's own
+// trace endpoint rather than a generic 204 check, since that response
+// includes the client IP and country as Cloudflare's edge sees them --
+// i.e. exactly what a site would see you connecting from.
+func (a *App) TestConnection() (TestResult, error) {
 	if a.manager.Status().State != xray.StateRunning {
-		return "", fmt.Errorf("not connected")
+		return TestResult{}, fmt.Errorf("not connected")
 	}
 
 	proxyURL, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", xray.HTTPInboundPort))
@@ -164,14 +179,33 @@ func (a *App) TestConnection() (string, error) {
 		Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)},
 	}
 
-	const testURL = "https://cp.cloudflare.com/generate_204"
-	resp, err := client.Get(testURL)
+	start := time.Now()
+	resp, err := client.Get("https://www.cloudflare.com/cdn-cgi/trace")
 	if err != nil {
-		return "", fmt.Errorf("request through proxy failed: %w", err)
+		return TestResult{}, fmt.Errorf("request through proxy failed: %w", err)
 	}
 	defer resp.Body.Close()
+	delay := time.Since(start)
 
-	return fmt.Sprintf("OK (%s -> HTTP %d)", testURL, resp.StatusCode), nil
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return TestResult{}, fmt.Errorf("read response: %w", err)
+	}
+
+	result := TestResult{DelayMs: delay.Milliseconds()}
+	for _, line := range strings.Split(string(body), "\n") {
+		if ip, ok := strings.CutPrefix(line, "ip="); ok {
+			result.IP = strings.TrimSpace(ip)
+		}
+		if loc, ok := strings.CutPrefix(line, "loc="); ok {
+			result.Country = strings.TrimSpace(loc)
+		}
+	}
+	if result.IP == "" {
+		return TestResult{}, fmt.Errorf("unexpected response from connectivity check")
+	}
+
+	return result, nil
 }
 
 // RecentLog returns the tail of xray-core's own error log, for diagnosing a

@@ -125,8 +125,6 @@ the frontend once `wails dev`/`wails build` generates `frontend/wailsjs/go/main/
 - **Linux system proxy only covers GNOME** (`gsettings`) — other desktop environments
   need their own backend in `internal/system/proxy_linux.go`.
 - **No automated tests yet.**
-- **TUN mode is deliberately out of scope** for this phase — Kite currently does
-  HTTP/SOCKS system-proxy routing only, not full-system tunneling.
 - **No code-signing** — Windows SmartScreen and macOS Gatekeeper will both warn on an
   unsigned binary; this is expected for now.
 
