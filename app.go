@@ -57,6 +57,18 @@ func (a *App) DeleteProfile(id string) error {
 	return a.store.Delete(id)
 }
 
+func (a *App) RenameProfile(id string, name string) (profile.Server, error) {
+	server, err := a.store.Get(id)
+	if err != nil {
+		return profile.Server{}, err
+	}
+	server.Name = name
+	if err := a.store.Update(server); err != nil {
+		return profile.Server{}, err
+	}
+	return server, nil
+}
+
 // --- Proxy control methods (bound to frontend) ---
 
 func (a *App) Connect(serverID string) error {

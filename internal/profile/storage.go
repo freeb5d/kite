@@ -64,6 +64,25 @@ func (s *Store) Add(server Server) error {
 	return s.writeAll(servers)
 }
 
+// Update replaces the server with the same ID, preserving its position.
+func (s *Store) Update(server Server) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	servers, err := s.readAll()
+	if err != nil {
+		return err
+	}
+
+	for i, srv := range servers {
+		if srv.ID == server.ID {
+			servers[i] = server
+			return s.writeAll(servers)
+		}
+	}
+	return fmt.Errorf("no server with id %q", server.ID)
+}
+
 func (s *Store) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
