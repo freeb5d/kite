@@ -15,9 +15,9 @@ jobs:
             platform: windows/amd64
             artifact: kite-windows-amd64.exe
             binpath: build/bin/kite.exe
-          - os: macos-latest
-            platform: darwin/arm64
-            artifact: kite-macos-arm64.app.zip
+          - os: macos-13
+            platform: darwin/amd64
+            artifact: kite-macos-amd64.app.zip
             binpath: build/bin/kite.app
           - os: ubuntu-latest
             platform: linux/amd64
@@ -53,17 +53,22 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      - name: Build
+      - name: Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: wails build -platform ${{ matrix.platform }} -tags webkit2_41 -clean
+
+      - name: Build (Windows/macOS)
+        if: matrix.os != 'ubuntu-latest'
         run: wails build -platform ${{ matrix.platform }} -clean
 
       - name: Zip macOS app bundle
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-13'
         run: |
           cd build/bin
           zip -r ../../${{ matrix.artifact }} kite.app
 
       - name: Rename binary (Windows/Linux)
-        if: matrix.os != 'macos-latest'
+        if: matrix.os != 'macos-13'
         shell: bash
         run: cp "${{ matrix.binpath }}" "${{ matrix.artifact }}"
 
