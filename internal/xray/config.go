@@ -142,16 +142,27 @@ func outboundSettings(server profile.Server) (map[string]interface{}, error) {
 }
 
 // streamSettings builds the "streamSettings" object (network + optional TLS)
-// from the extra fields captured while parsing the share link.
+// from the extra fields captured while parsing the share link. vmess://
+// links are base64 JSON and use "net"/"tls" (mapped by parser.go to
+// Extra["network"]/Extra["tls"]); vless://, trojan://, ss:// links are
+// plain query strings that use "type"/"security" instead -- both are
+// checked here since Extra just holds whatever the link actually used.
 func streamSettings(server profile.Server) map[string]interface{} {
-	network := firstNonEmpty(server.Extra["network"], "tcp")
+	network := firstNonEmpty(server.Extra["network"], server.Extra["type"], "tcp")
 	settings := map[string]interface{}{"network": network}
 
-	if tls := server.Extra["tls"]; tls == "tls" || tls == "reality" {
+	security := firstNonEmpty(server.Extra["security"], server.Extra["tls"])
+	if security == "tls" || security == "reality" {
 		settings["security"] = "tls"
 		tlsSettings := map[string]interface{}{"allowInsecure": false}
 		if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"]); sni != "" {
 			tlsSettings["serverName"] = sni
+		}
+		if alpn := server.Extra["alpn"]; alpn != "" {
+			tlsSettings["alpn"] = alpn
+		}
+		if fp := server.Extra["fp"]; fp != "" {
+			tlsSettings["fingerprint"] = fp
 		}
 		settings["tlsSettings"] = tlsSettings
 	}
