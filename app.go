@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	goruntime "runtime"
 	"time"
 
 	"github.com/freeb5d/kite/internal/profile"
@@ -79,17 +80,36 @@ func (a *App) RenameProfile(id string, name string) (profile.Server, error) {
 
 // --- Proxy control methods (bound to frontend) ---
 
-func (a *App) Connect(serverID string) error {
+// Connect starts xray-core against the given server profile in the given
+// mode ("proxy" or "tun"; anything else is treated as "proxy"). TUN mode
+// is currently Windows-only and requires the process to already be
+// running elevated -- see Platform/IsElevated/RestartElevated below.
+func (a *App) Connect(serverID string, mode string) error {
 	server, err := a.store.Get(serverID)
 	if err != nil {
 		return err
 	}
-	if err := a.manager.Start(server); err != nil {
+
+	xrayMode := xray.ModeProxy
+	if mode == string(xray.ModeTUN) {
+		if goruntime.GOOS != "windows" {
+			return fmt.Errorf("TUN mode is currently only supported on Windows")
+		}
+		if !system.IsElevated() {
+			return fmt.Errorf("TUN mode needs administrator privileges -- use \"Restart as admin\" and try again")
+		}
+		xrayMode = xray.ModeTUN
+	}
+
+	if err := a.manager.Start(server, xrayMode); err != nil {
 		return err
 	}
-	if err := system.SetProxy("127.0.0.1", xray.HTTPInboundPort); err != nil {
-		_ = a.manager.Stop()
-		return err
+
+	if xrayMode == xray.ModeProxy {
+		if err := system.SetProxy("127.0.0.1", xray.HTTPInboundPort); err != nil {
+			_ = a.manager.Stop()
+			return err
+		}
 	}
 	return nil
 }
@@ -101,6 +121,32 @@ func (a *App) Disconnect() error {
 
 func (a *App) Status() xray.Status {
 	return a.manager.Status()
+}
+
+// Platform reports the OS Kite is running on, so the frontend can hide
+// the TUN mode option where it isn't supported yet.
+func (a *App) Platform() string {
+	return goruntime.GOOS
+}
+
+// IsElevated reports whether Kite is currently running with administrator
+// privileges (relevant to TUN mode, which needs them).
+func (a *App) IsElevated() bool {
+	return system.IsElevated()
+}
+
+// RestartElevated relaunches Kite with a UAC prompt and exits this
+// process on success. Only returns when the relaunch itself failed
+// (including the user cancelling the prompt).
+func (a *App) RestartElevated() error {
+	if err := system.RelaunchElevated(); err != nil {
+		return err
+	}
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		os.Exit(0)
+	}()
+	return nil
 }
 
 // TestConnection makes an actual HTTP request through the local xray HTTP

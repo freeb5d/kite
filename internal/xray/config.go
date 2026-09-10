@@ -14,6 +14,20 @@ import (
 const (
 	HTTPInboundPort  = 2080
 	SOCKSInboundPort = 2081
+
+	// TUNGateway is the point-to-point address xray-core assigns to the
+	// TUN adapter (Windows/Linux) when it's brought up.
+	TUNGateway = "10.10.0.1/24"
+)
+
+// Mode selects what xray-core listens on: a local HTTP/SOCKS proxy the OS
+// or individual apps are pointed at, or a TUN network adapter that
+// captures all IP traffic routed to it.
+type Mode string
+
+const (
+	ModeProxy Mode = "proxy"
+	ModeTUN   Mode = "tun"
 )
 
 // LogFilePath returns where xray-core's own error log is written, so it can
@@ -34,8 +48,8 @@ func LogFilePath() string {
 // own conf.Config loader — the same path xray-core uses when loading a
 // config file from disk, so every protocol/transport it understands is
 // supported without us re-implementing its internal proto types.
-func BuildConfig(server profile.Server) (*core.Config, error) {
-	raw, err := buildJSON(server)
+func BuildConfig(server profile.Server, mode Mode) (*core.Config, error) {
+	raw, err := buildJSON(server, mode)
 	if err != nil {
 		return nil, err
 	}
@@ -52,10 +66,49 @@ func BuildConfig(server profile.Server) (*core.Config, error) {
 	return pbConfig, nil
 }
 
-func buildJSON(server profile.Server) ([]byte, error) {
+func buildJSON(server profile.Server, mode Mode) ([]byte, error) {
 	outbound, err := outboundSettings(server)
 	if err != nil {
 		return nil, err
+	}
+
+	inbounds := []map[string]interface{}{
+		{
+			"tag":      "http-in",
+			"protocol": "http",
+			"listen":   "127.0.0.1",
+			"port":     HTTPInboundPort,
+		},
+		{
+			"tag":      "socks-in",
+			"protocol": "socks",
+			"listen":   "127.0.0.1",
+			"port":     SOCKSInboundPort,
+			"settings": map[string]interface{}{"udp": true},
+		},
+	}
+
+	if mode == ModeTUN {
+		// port/listen are ignored for this inbound -- it's not a proxy
+		// listener, it's a virtual network adapter. Leaving "name" unset
+		// lets xray-core auto-pick a free interface name.
+		// autoSystemRoutingTable makes xray-core itself add (and later
+		// remove) the system default route through the adapter; the
+		// exception route for the VPN server's own IP -- required so
+		// xray's own outbound connection doesn't loop back through the
+		// adapter it's feeding -- is added separately by the caller
+		// (internal/system.AddExceptionRoute) *before* this inbound
+		// comes up.
+		inbounds = append(inbounds, map[string]interface{}{
+			"tag":      "tun-in",
+			"protocol": "tun",
+			"settings": map[string]interface{}{
+				"desc":                   "Wintun",
+				"mtu":                    1500,
+				"gateway":                []string{TUNGateway},
+				"autoSystemRoutingTable": []string{"0.0.0.0/0"},
+			},
+		})
 	}
 
 	config := map[string]interface{}{
@@ -63,21 +116,7 @@ func buildJSON(server profile.Server) ([]byte, error) {
 			"loglevel": "debug",
 			"error":    LogFilePath(),
 		},
-		"inbounds": []map[string]interface{}{
-			{
-				"tag":      "http-in",
-				"protocol": "http",
-				"listen":   "127.0.0.1",
-				"port":     HTTPInboundPort,
-			},
-			{
-				"tag":      "socks-in",
-				"protocol": "socks",
-				"listen":   "127.0.0.1",
-				"port":     SOCKSInboundPort,
-				"settings": map[string]interface{}{"udp": true},
-			},
-		},
+		"inbounds": inbounds,
 		"outbounds": []map[string]interface{}{
 			{
 				"tag":            "proxy",

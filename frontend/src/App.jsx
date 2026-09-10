@@ -15,6 +15,9 @@ import {
   RecentLog,
   CheckForUpdate,
   ApplyUpdate,
+  Platform,
+  IsElevated,
+  RestartElevated,
 } from '../wailsjs/go/main/App'
 
 function errorText(err) {
@@ -54,6 +57,8 @@ const icons = {
   sun: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10ZM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
   moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z',
   download: 'M12 3v12m0 0-4-4m4 4 4-4M4 21h16',
+  shield: 'M12 3 5 6v5c0 4.5 3 7.7 7 9 4-1.3 7-4.5 7-9V6l-7-3Z',
+  router: 'M4 15h16v4H4z M4 19v0 M20 19v0 M8 15V9a4 4 0 0 1 8 0v6 M12 3v2',
 }
 
 function StatusDot({ state }) {
@@ -106,6 +111,9 @@ export default function App() {
   const [updateError, setUpdateError] = useState('')
   const [checkingUpdate, setCheckingUpdate] = useState(false)
   const [updateProgress, setUpdateProgress] = useState(null)
+  const [mode, setMode] = useState('proxy')
+  const [platform, setPlatform] = useState('')
+  const [elevated, setElevated] = useState(true)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -126,6 +134,8 @@ export default function App() {
     Status().then(setStatus).catch(() => {})
     Version().then(setVersion).catch(() => {})
     CheckForUpdate().then(setUpdateInfo).catch(() => {})
+    Platform().then(setPlatform).catch(() => {})
+    IsElevated().then(setElevated).catch(() => {})
 
     if (window.runtime && window.runtime.EventsOn) {
       const off = window.runtime.EventsOn('update:progress', (p) => setUpdateProgress(p))
@@ -181,7 +191,7 @@ export default function App() {
     }
     setPending(true)
     try {
-      await Connect(selected.id)
+      await Connect(selected.id, mode)
       setStatus(await Status())
       handleTest()
     } catch (err) {
@@ -189,6 +199,15 @@ export default function App() {
       setStatus(await Status().catch(() => ({ state: 'stopped' })))
     } finally {
       setPending(false)
+    }
+  }
+
+  async function handleRestartElevated() {
+    setError('')
+    try {
+      await RestartElevated()
+    } catch (err) {
+      setError(errorText(err))
     }
   }
 
@@ -459,9 +478,42 @@ export default function App() {
             )}
           </div>
 
+          {platform === 'windows' && !isRunning && (
+            <div className="flex items-center rounded-lg bg-[var(--bg-panel)] border border-[var(--border)] p-1 text-xs">
+              <button
+                onClick={() => setMode('proxy')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+                  mode === 'proxy' ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'text-[var(--text-dim)] hover:text-[var(--text)]'
+                }`}
+              >
+                <Icon path={icons.globe} className="w-3.5 h-3.5" />
+                Proxy
+              </button>
+              <button
+                onClick={() => setMode('tun')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+                  mode === 'tun' ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'text-[var(--text-dim)] hover:text-[var(--text)]'
+                }`}
+              >
+                <Icon path={icons.router} className="w-3.5 h-3.5" />
+                TUN
+              </button>
+            </div>
+          )}
+
+          {platform === 'windows' && mode === 'tun' && !elevated && !isRunning && (
+            <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] px-3 py-2 text-xs text-[var(--text-dim)]">
+              <Icon path={icons.shield} className="w-4 h-4 shrink-0 text-[var(--text-faint)]" />
+              <span>TUN mode needs administrator privileges.</span>
+              <button onClick={handleRestartElevated} className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium shrink-0">
+                Restart as admin
+              </button>
+            </div>
+          )}
+
           <button
             onClick={handleToggle}
-            disabled={isBusy || (!isRunning && !selected)}
+            disabled={isBusy || (!isRunning && !selected) || (mode === 'tun' && !elevated && !isRunning)}
             className={`relative w-40 h-40 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed ${
               isRunning
                 ? 'bg-[var(--accent)] shadow-[0_0_60px_-10px_rgba(99,102,241,0.7)]'
@@ -479,7 +531,11 @@ export default function App() {
             <div className="text-sm font-medium">
               {isBusy ? (isRunning ? 'Disconnecting…' : 'Connecting…') : isRunning ? 'Connected' : 'Disconnected'}
             </div>
-            {isRunning && <div className="text-xs text-[var(--text-faint)] mt-1">HTTP 127.0.0.1:2080 · SOCKS5 127.0.0.1:2081</div>}
+            {isRunning && (
+              <div className="text-xs text-[var(--text-faint)] mt-1">
+                {status.mode === 'tun' ? 'TUN adapter · all system traffic' : 'HTTP 127.0.0.1:2080 · SOCKS5 127.0.0.1:2081'}
+              </div>
+            )}
           </div>
 
           {isRunning && (

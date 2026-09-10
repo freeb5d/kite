@@ -35,6 +35,7 @@ Once installed, it checks for new releases on startup and can update itself in o
 - **Real xray-core**, embedded as a Go library (not a shelled-out binary) — full lifecycle control, no parsing stdout for stats
 - **Transports**: TCP and WebSocket, with TLS/REALITY security detection straight from the link
 - **System proxy integration** — Connect/Disconnect toggles the OS HTTP proxy automatically (per-user registry on Windows, no elevation needed)
+- **TUN mode (Windows)** — routes all system traffic through a virtual network adapter (WinTun, bundled), instead of just apps that honor a proxy setting. Needs administrator privileges; Kite can relaunch itself elevated with one click
 - **Built-in diagnostics** — a Test button makes a real request through the tunnel and reports the actual result; a log viewer surfaces xray-core's own debug log inline
 - **Self-updating** — checks GitHub Releases on launch, one click downloads, swaps, and relaunches
 - **Dark / light themes**, with a searchable server list, inline rename, and one-click remove
@@ -79,13 +80,22 @@ kite/
 │   │   ├── manager.go        Start/Stop/Restart a real core.Instance
 │   │   ├── config.go         Server profile -> Xray JSON config ->
 │   │   │                     conf.Config.Build() -> *core.Config
-│   │   └── stats.go          Traffic counters (stub, see below)
+│   │   ├── stats.go          Traffic counters (stub, see below)
+│   │   └── tun_windows.go    Writes the embedded wintun.dll next to the
+│   │                         exe (TUN mode needs it alongside the binary)
 │   ├── profile/              vmess/vless/trojan/ss link parsing +
 │   │                         JSON-file server storage
-│   ├── system/                per-OS HTTP/SOCKS system proxy toggling
+│   ├── system/                per-OS HTTP/SOCKS system proxy toggling +
+│   │   │                      TUN-mode support (Windows)
 │   │   ├── proxy_windows.go   HKCU Internet Settings (no admin needed)
 │   │   ├── proxy_darwin.go    networksetup
-│   │   └── proxy_linux.go     gsettings (GNOME)
+│   │   ├── proxy_linux.go     gsettings (GNOME)
+│   │   ├── elevate_windows.go Check/request administrator privileges
+│   │   ├── route_windows.go   Exception route so xray's own upstream
+│   │   │                      connection doesn't loop through the TUN
+│   │   │                      adapter it's feeding (see that file's docs)
+│   │   └── wintun/            Embedded Wintun driver DLL (dual GPLv2/MIT,
+│   │                          see WINTUN_LICENSE.txt in that directory)
 │   └── update/                self-update: check GitHub Releases, download
 │                               + swap the running executable, relaunch
 ├── frontend/                 Vite + React + Tailwind (CSS-variable theming
@@ -106,6 +116,12 @@ the frontend once `wails dev`/`wails build` generates `frontend/wailsjs/go/main/
   bindings-generator crash on `macos-latest`).
 - **Traffic stats are a stub** — `internal/xray/stats.go`'s `Traffic()` always returns
   zero; it needs to read from the running instance's stats manager instead.
+- **TUN mode is Windows-only** and IPv4-only for now — the exception route that keeps
+  xray's own upstream connection from looping through the TUN adapter
+  (`internal/system/route_windows.go`) only covers resolved IPv4 addresses; a server
+  that's only reachable over IPv6 won't work in TUN mode yet. Linux/macOS TUN support is
+  possible (xray-core's own `proxy/tun` package already supports both) but isn't wired
+  up here.
 - **Linux system proxy only covers GNOME** (`gsettings`) — other desktop environments
   need their own backend in `internal/system/proxy_linux.go`.
 - **No automated tests yet.**

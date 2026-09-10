@@ -3,6 +3,21 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.5.0 — TUN mode (Windows), update download progress
+
+- **TUN mode**: a Proxy/TUN toggle now appears on Windows. TUN mode routes
+  *all* system traffic through a virtual network adapter instead of just
+  apps that honor a proxy setting, using xray-core's own built-in `proxy/tun`
+  inbound with the bundled Wintun driver. Since creating a system-level
+  network adapter needs administrator rights, Kite checks elevation and
+  offers a one-click "Restart as admin" when it isn't already elevated.
+  An exception route is added for the VPN server's own resolved IP(s)
+  *before* xray's TUN inbound brings up its default route, so xray's own
+  outbound connection doesn't loop back through the adapter it's feeding.
+  Windows-only and IPv4-only for this first pass — see README known gaps.
+- **Update progress**: the self-update banner now shows a live percentage
+  and progress bar while downloading, instead of a static "Updating…".
+
 ## v0.4.0 — About panel, self-update, dark/light theme
 
 - **Self-update**: Kite now checks GitHub Releases on launch. When a newer
