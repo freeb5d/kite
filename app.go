@@ -82,3 +82,11 @@ func (a *App) Disconnect() error {
 func (a *App) Status() xray.Status {
 	return a.manager.Status()
 }
+
+// version is set at build time via -ldflags "-X main.version=v1.2.3"
+// (see .github/workflows/release.yml); "dev" otherwise.
+var version = "dev"
+
+func (a *App) Version() string {
+	return version
+}

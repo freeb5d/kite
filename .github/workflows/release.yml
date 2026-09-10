@@ -57,13 +57,23 @@ jobs:
         working-directory: frontend
         run: npm install
 
+      - name: Determine version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "value=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=dev-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: wails build -platform ${{ matrix.platform }} -tags webkit2_41 -clean
+        run: wails build -platform ${{ matrix.platform }} -tags webkit2_41 -ldflags "-X main.version=${{ steps.version.outputs.value }}" -clean
 
       - name: Build (Windows)
         if: matrix.os == 'windows-latest'
-        run: wails build -platform ${{ matrix.platform }} -clean
+        run: wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=${{ steps.version.outputs.value }}" -clean
 
       - name: Rename binary
         shell: bash
