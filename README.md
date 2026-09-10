@@ -44,7 +44,7 @@ Once installed, it checks for new releases on startup and can update itself in o
 
 ### One-time toolchain setup
 
-1. **Go 1.21+** — https://go.dev/dl/. Windows also needs a C compiler for CGO
+1. **Go 1.27+** — https://go.dev/dl/. Windows also needs a C compiler for CGO
    (xray-core and some Wails dependencies use it) — install
    [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) or `winget install -e --id GoLang.Go`
    plus MSYS2's `mingw-w64-x86_64-gcc`.
