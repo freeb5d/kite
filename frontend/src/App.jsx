@@ -105,6 +105,7 @@ export default function App() {
   const [updating, setUpdating] = useState(false)
   const [updateError, setUpdateError] = useState('')
   const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [updateProgress, setUpdateProgress] = useState(null)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -125,6 +126,11 @@ export default function App() {
     Status().then(setStatus).catch(() => {})
     Version().then(setVersion).catch(() => {})
     CheckForUpdate().then(setUpdateInfo).catch(() => {})
+
+    if (window.runtime && window.runtime.EventsOn) {
+      const off = window.runtime.EventsOn('update:progress', (p) => setUpdateProgress(p))
+      return off
+    }
   }, [])
 
   const filtered = useMemo(() => {
@@ -256,6 +262,7 @@ export default function App() {
   async function handleUpdate() {
     setUpdating(true)
     setUpdateError('')
+    setUpdateProgress(null)
     try {
       // ApplyUpdate only returns on failure -- on success the process
       // exits and relaunches before this promise would ever resolve.
@@ -263,29 +270,49 @@ export default function App() {
     } catch (err) {
       setUpdateError(errorText(err))
       setUpdating(false)
+      setUpdateProgress(null)
     }
   }
 
   const showUpdateBanner = updateInfo?.available && !updateDismissed
+  const progressPct =
+    updateProgress && updateProgress.total > 0 ? Math.min(100, Math.round((updateProgress.downloaded / updateProgress.total) * 100)) : null
 
   return (
     <div className="h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] overflow-hidden">
       {showUpdateBanner && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-[var(--accent)] text-[var(--accent-text)] text-sm shrink-0">
-          <Icon path={icons.download} className="w-4 h-4 shrink-0" />
-          <span className="flex-1">
-            Kite v{updateInfo.latest} is available (you're on v{updateInfo.current || version}).
-          </span>
-          <button
-            onClick={handleUpdate}
-            disabled={updating}
-            className="rounded-md bg-white/20 hover:bg-white/30 px-3 py-1 text-xs font-medium disabled:opacity-60 transition-colors"
-          >
-            {updating ? 'Updating…' : 'Update now'}
-          </button>
-          <button onClick={() => setUpdateDismissed(true)} className="text-white/70 hover:text-white">
-            <Icon path={icons.x} className="w-4 h-4" />
-          </button>
+        <div className="flex flex-col shrink-0">
+          <div className="flex items-center gap-3 px-4 py-2 bg-[var(--accent)] text-[var(--accent-text)] text-sm">
+            <Icon path={icons.download} className="w-4 h-4 shrink-0" />
+            <span className="flex-1">
+              {updating
+                ? progressPct !== null
+                  ? `Downloading update… ${progressPct}%`
+                  : 'Downloading update…'
+                : `Kite v${updateInfo.latest} is available (you're on v${updateInfo.current || version}).`}
+            </span>
+            {!updating && (
+              <button
+                onClick={handleUpdate}
+                className="rounded-md bg-white/20 hover:bg-white/30 px-3 py-1 text-xs font-medium transition-colors"
+              >
+                Update now
+              </button>
+            )}
+            {!updating && (
+              <button onClick={() => setUpdateDismissed(true)} className="text-white/70 hover:text-white">
+                <Icon path={icons.x} className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {updating && (
+            <div className="h-1 bg-black/20">
+              <div
+                className="h-full bg-white/80 transition-all duration-150"
+                style={{ width: progressPct !== null ? `${progressPct}%` : '30%' }}
+              />
+            </div>
+          )}
         </div>
       )}
       {updateError && (

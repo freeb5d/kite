@@ -12,6 +12,7 @@ import (
 	"github.com/freeb5d/kite/internal/system"
 	"github.com/freeb5d/kite/internal/update"
 	"github.com/freeb5d/kite/internal/xray"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App is the Wails bound struct: every exported method on it becomes
@@ -181,7 +182,13 @@ func (a *App) ApplyUpdate() error {
 	}
 	_ = system.ClearProxy()
 
-	if err := update.Apply(a.updateInfo); err != nil {
+	err := update.Apply(a.updateInfo, func(p update.Progress) {
+		wailsruntime.EventsEmit(a.ctx, "update:progress", map[string]int64{
+			"downloaded": p.Downloaded,
+			"total":      p.Total,
+		})
+	})
+	if err != nil {
 		return err
 	}
 

@@ -137,12 +137,21 @@ func semverParts(v string) ([3]int, bool) {
 	return out, true
 }
 
+// Progress reports download progress: Total is 0 if the server didn't send
+// a Content-Length (progress is then indeterminate; report a spinner).
+type Progress struct {
+	Downloaded int64
+	Total      int64
+}
+
 // Apply downloads the platform asset referenced by a prior Check() result
 // and swaps it in for the running executable, then relaunches it. Only
 // call this after Check() reported Available -- it returns an error on any
 // failure *before* relaunching; once the new process is successfully
 // started, it does not return at all (the caller is expected to exit).
-func Apply(info Info) error {
+// onProgress may be nil; when set, it's called periodically during the
+// download (never concurrently).
+func Apply(info Info, onProgress func(Progress)) error {
 	if info.downloadURL == "" {
 		return fmt.Errorf("no downloadable build for this platform")
 	}
@@ -156,7 +165,7 @@ func Apply(info Info) error {
 	}
 
 	newPath := exePath + ".new"
-	if err := download(info.downloadURL, newPath); err != nil {
+	if err := download(info.downloadURL, newPath, onProgress); err != nil {
 		return fmt.Errorf("download update: %w", err)
 	}
 	if err := os.Chmod(newPath, 0o755); err != nil {
@@ -188,7 +197,7 @@ func Apply(info Info) error {
 	return nil
 }
 
-func download(url, dest string) error {
+func download(url, dest string, onProgress func(Progress)) error {
 	client := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -205,6 +214,32 @@ func download(url, dest string) error {
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, resp.Body)
+	var reader io.Reader = resp.Body
+	if onProgress != nil {
+		reader = &progressReader{r: resp.Body, total: resp.ContentLength, onProgress: onProgress}
+	}
+
+	_, err = io.Copy(out, reader)
 	return err
+}
+
+// progressReader calls onProgress after each underlying Read, throttled so
+// a fast local network doesn't flood the frontend with events.
+type progressReader struct {
+	r          io.Reader
+	total      int64
+	downloaded int64
+	onProgress func(Progress)
+	lastReport time.Time
+}
+
+func (p *progressReader) Read(buf []byte) (int, error) {
+	n, err := p.r.Read(buf)
+	p.downloaded += int64(n)
+
+	if time.Since(p.lastReport) > 100*time.Millisecond || err != nil {
+		p.lastReport = time.Now()
+		p.onProgress(Progress{Downloaded: p.downloaded, Total: p.total})
+	}
+	return n, err
 }
