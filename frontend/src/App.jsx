@@ -604,15 +604,43 @@ export default function App() {
             <h2 className="text-lg font-semibold">Kite</h2>
             <p className="text-xs text-[var(--text-faint)] mt-1">v{version.replace(/^v/, '')}</p>
             <p className="text-sm text-[var(--text-dim)] mt-4">
-              A cross-platform desktop V2Ray/Xray client, built with Wails, Go and React.
+              A free, open-source cross-platform desktop client for V2Ray / Xray / VMess / VLESS / Trojan /
+              Shadowsocks proxies, with TUN mode, built with Wails, Go and React.
             </p>
 
-            <button
-              className="mt-4 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] underline underline-offset-2"
-              onClick={() => openExternal('https://github.com/freeb5d/kite')}
+            <div
+              className="mt-4 flex items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] px-3 py-1.5 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors"
+              onClick={() => navigator.clipboard?.writeText('https://github.com/freeb5d/kite')}
+              title="Click to copy"
             >
-              github.com/freeb5d/kite
-            </button>
+              <span className="text-xs text-[var(--accent)]">github.com/freeb5d/kite</span>
+              <Icon path="M8 16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2m-6 12h8a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z" className="w-3.5 h-3.5 text-[var(--text-faint)]" />
+            </div>
+
+            <div className="mt-3 flex items-center justify-center gap-4 text-xs">
+              <button
+                className="text-[var(--text-dim)] hover:text-[var(--accent)] underline underline-offset-2"
+                onClick={() => openExternal('https://github.com/freeb5d/kite')}
+              >
+                Repository
+              </button>
+              <button
+                className="text-[var(--text-dim)] hover:text-[var(--accent)] underline underline-offset-2"
+                onClick={() => openExternal('https://github.com/freeb5d/kite/releases')}
+              >
+                Releases
+              </button>
+              <button
+                className="text-[var(--text-dim)] hover:text-[var(--accent)] underline underline-offset-2"
+                onClick={() => openExternal('https://github.com/freeb5d/kite/issues')}
+              >
+                Report an issue
+              </button>
+            </div>
+
+            <p className="mt-3 text-[10px] text-[var(--text-faint)]">
+              Search "Kite VPN" or "freeb5d kite" on GitHub to find this project again · MIT licensed
+            </p>
 
             <div className="mt-5 pt-4 border-t border-[var(--border)]">
               <button

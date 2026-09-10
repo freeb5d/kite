@@ -10,6 +10,7 @@
   [![Build](https://img.shields.io/github/actions/workflow/status/freeb5d/kite/release.yml?label=build)](https://github.com/freeb5d/kite/actions/workflows/release.yml)
   [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-6366f1)](#downloads)
   [![Go Report Card](https://goreportcard.com/badge/github.com/freeb5d/kite)](https://goreportcard.com/report/github.com/freeb5d/kite)
+  [![License: MIT](https://img.shields.io/badge/license-MIT-6366f1)](LICENSE)
 
   [Download](#downloads) · [Features](#features) · [Building from source](#building-from-source) · [Architecture](#architecture)
 </div>
@@ -132,3 +133,7 @@ the frontend once `wails dev`/`wails build` generates `frontend/wailsjs/go/main/
 
 Issues and PRs welcome. See [Known gaps](#known-gaps--next-steps) above for what's
 actually left to do.
+
+## License
+
+[MIT](LICENSE)
