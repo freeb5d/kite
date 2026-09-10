@@ -114,6 +114,20 @@ func (s *Store) readAll() ([]Server, error) {
 	if err := json.Unmarshal(data, &servers); err != nil {
 		return nil, fmt.Errorf("corrupt server list at %s: %w", s.path, err)
 	}
+
+	healed := false
+	for i, srv := range servers {
+		if srv.ID == "" {
+			servers[i].ID = uuid.NewString()
+			healed = true
+		}
+	}
+	if healed {
+		if err := s.writeAll(servers); err != nil {
+			return nil, err
+		}
+	}
+
 	return servers, nil
 }
 
