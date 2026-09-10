@@ -12,6 +12,8 @@ import {
   Version,
   TestConnection,
   RecentLog,
+  CheckForUpdate,
+  ApplyUpdate,
 } from '../wailsjs/go/main/App'
 
 function errorText(err) {
@@ -19,6 +21,14 @@ function errorText(err) {
   if (typeof err === 'string') return err
   if (err.message) return err.message
   return String(err)
+}
+
+function openExternal(url) {
+  if (window.runtime && window.runtime.BrowserOpenURL) {
+    window.runtime.BrowserOpenURL(url)
+  } else {
+    window.open(url, '_blank')
+  }
 }
 
 function Icon({ path, className = 'w-5 h-5' }) {
@@ -38,12 +48,31 @@ const icons = {
   power: 'M12 3v9M18.4 6.6a8.5 8.5 0 1 1-12.8 0',
   gauge: 'M12 8v4l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z',
   terminal: 'm5 6 5 5-5 5M13 17h6',
+  info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 16v-5h-1M11.94 8h.01',
+  x: 'M6 6l12 12M18 6 6 18',
+  sun: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10ZM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z',
+  download: 'M12 3v12m0 0-4-4m4 4 4-4M4 21h16',
 }
 
 function StatusDot({ state }) {
   const color =
     state === 'running' ? 'bg-emerald-400' : state === 'starting' ? 'bg-amber-400' : state === 'error' ? 'bg-red-400' : 'bg-neutral-600'
   return <span className={`inline-block w-2 h-2 rounded-full ${color}`} />
+}
+
+function IconButton({ onClick, title, active, children }) {
+  return (
+    <button
+      className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+        active ? 'bg-[var(--bg-elevated)] text-[var(--accent)]' : 'text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)]'
+      }`}
+      title={title}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  )
 }
 
 export default function App() {
@@ -62,6 +91,28 @@ export default function App() {
   const [testing, setTesting] = useState(false)
   const [log, setLog] = useState('')
   const [showLog, setShowLog] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('kite-theme') || 'dark'
+    } catch {
+      return 'dark'
+    }
+  })
+  const [updateInfo, setUpdateInfo] = useState(null)
+  const [updateDismissed, setUpdateDismissed] = useState(false)
+  const [updating, setUpdating] = useState(false)
+  const [updateError, setUpdateError] = useState('')
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    try {
+      localStorage.setItem('kite-theme', theme)
+    } catch {
+      // ignore (private browsing / storage disabled)
+    }
+  }, [theme])
 
   useEffect(() => {
     ListProfiles()
@@ -72,6 +123,7 @@ export default function App() {
       .catch((err) => setError(errorText(err)))
     Status().then(setStatus).catch(() => {})
     Version().then(setVersion).catch(() => {})
+    CheckForUpdate().then(setUpdateInfo).catch(() => {})
   }, [])
 
   const filtered = useMemo(() => {
@@ -186,202 +238,309 @@ export default function App() {
     }
   }
 
+  async function handleCheckUpdate() {
+    setCheckingUpdate(true)
+    setUpdateError('')
+    try {
+      const info = await CheckForUpdate()
+      setUpdateInfo(info)
+      setUpdateDismissed(false)
+    } catch (err) {
+      setUpdateError(errorText(err))
+    } finally {
+      setCheckingUpdate(false)
+    }
+  }
+
+  async function handleUpdate() {
+    setUpdating(true)
+    setUpdateError('')
+    try {
+      // ApplyUpdate only returns on failure -- on success the process
+      // exits and relaunches before this promise would ever resolve.
+      await ApplyUpdate()
+    } catch (err) {
+      setUpdateError(errorText(err))
+      setUpdating(false)
+    }
+  }
+
+  const showUpdateBanner = updateInfo?.available && !updateDismissed
+
   return (
-    <div className="h-screen flex bg-neutral-950 text-neutral-100 overflow-hidden">
-      {/* Icon rail */}
-      <aside className="w-14 flex flex-col items-center py-4 gap-4 bg-neutral-925 border-r border-neutral-900 shrink-0" style={{ backgroundColor: '#0d0f13' }}>
-        <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-sm">K</div>
-        <div className="w-9 h-9 rounded-lg bg-neutral-800 text-indigo-400 flex items-center justify-center">
-          <Icon path={icons.globe} className="w-5 h-5" />
+    <div className="h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] overflow-hidden">
+      {showUpdateBanner && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-[var(--accent)] text-[var(--accent-text)] text-sm shrink-0">
+          <Icon path={icons.download} className="w-4 h-4 shrink-0" />
+          <span className="flex-1">
+            Kite v{updateInfo.latest} is available (you're on v{updateInfo.current || version}).
+          </span>
+          <button
+            onClick={handleUpdate}
+            disabled={updating}
+            className="rounded-md bg-white/20 hover:bg-white/30 px-3 py-1 text-xs font-medium disabled:opacity-60 transition-colors"
+          >
+            {updating ? 'Updating…' : 'Update now'}
+          </button>
+          <button onClick={() => setUpdateDismissed(true)} className="text-white/70 hover:text-white">
+            <Icon path={icons.x} className="w-4 h-4" />
+          </button>
         </div>
-        <button
-          className="w-9 h-9 rounded-lg text-neutral-500 hover:text-neutral-200 hover:bg-neutral-900 flex items-center justify-center transition-colors"
-          title={showLog ? 'Hide log' : 'Show log'}
-          onClick={handleShowLog}
-        >
-          <Icon path={icons.terminal} className="w-5 h-5" />
-        </button>
-        <div className="flex-1" />
-        <div className="text-[9px] text-neutral-700 rotate-0 select-none">{version && `v${version.replace(/^v/, '')}`}</div>
-      </aside>
+      )}
+      {updateError && (
+        <div className="px-4 py-1.5 bg-[var(--danger-bg)] text-[var(--danger)] text-xs shrink-0">Update failed: {updateError}</div>
+      )}
 
-      {/* Server list */}
-      <section className="w-80 border-r border-neutral-900 flex flex-col shrink-0">
-        <div className="p-4 border-b border-neutral-900">
-          <h1 className="text-lg font-semibold mb-3">Kite</h1>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Icon path={icons.search} className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-600" />
-              <input
-                className="w-full rounded-lg bg-neutral-900 border border-neutral-800 pl-8 pr-2 py-2 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-indigo-600"
-                placeholder="Search servers"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-            <button
-              className="w-9 h-9 shrink-0 rounded-lg bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center transition-colors"
-              title="Add server"
-              onClick={() => setAddOpen((v) => !v)}
-            >
-              <Icon path={icons.plus} className="w-4 h-4" />
-            </button>
+      <div className="flex-1 flex overflow-hidden">
+        {/* Icon rail */}
+        <aside className="w-14 flex flex-col items-center py-4 gap-4 bg-[var(--bg-panel)] border-r border-[var(--border)] shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] flex items-center justify-center font-bold text-sm">
+            K
           </div>
+          <IconButton active title="Servers">
+            <Icon path={icons.globe} className="w-5 h-5" />
+          </IconButton>
+          <IconButton title={showLog ? 'Hide log' : 'Show log'} onClick={handleShowLog}>
+            <Icon path={icons.terminal} className="w-5 h-5" />
+          </IconButton>
+          <IconButton title="About" onClick={() => setAboutOpen(true)}>
+            <Icon path={icons.info} className="w-5 h-5" />
+          </IconButton>
+          <div className="flex-1" />
+          <IconButton title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'} onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}>
+            <Icon path={theme === 'dark' ? icons.sun : icons.moon} className="w-5 h-5" />
+          </IconButton>
+        </aside>
 
-          {addOpen && (
-            <div className="flex gap-2 mt-3">
-              <input
-                autoFocus
-                className="flex-1 rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-xs placeholder:text-neutral-600 focus:outline-none focus:border-indigo-600"
-                placeholder="vmess:// vless:// trojan:// ss://"
-                value={link}
-                onChange={(e) => setLink(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
-              />
+        {/* Server list */}
+        <section className="w-80 border-r border-[var(--border)] flex flex-col shrink-0">
+          <div className="p-4 border-b border-[var(--border)]">
+            <h1 className="text-lg font-semibold mb-3">Kite</h1>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Icon path={icons.search} className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
+                <input
+                  className="w-full rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] pl-8 pr-2 py-2 text-sm placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]"
+                  placeholder="Search servers"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
               <button
-                className="rounded-lg bg-indigo-500 hover:bg-indigo-400 px-3 text-xs font-medium transition-colors"
-                onClick={handleAddLink}
+                className="w-9 h-9 shrink-0 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-text)] flex items-center justify-center transition-colors"
+                title="Add server"
+                onClick={() => setAddOpen((v) => !v)}
               >
-                Add
+                <Icon path={icons.plus} className="w-4 h-4" />
               </button>
             </div>
-          )}
-        </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {filtered.length === 0 && (
-            <div className="text-center text-neutral-600 text-xs mt-10 px-4">
-              {servers.length === 0 ? 'No servers yet — click + to add one from a share link.' : 'No matches.'}
-            </div>
-          )}
-          {filtered.map((s) => {
-            const isSelected = s.id === selectedId
-            const isActive = isSelected && isRunning
-            return (
-              <div
-                key={s.id}
-                onClick={() => setSelectedId(s.id)}
-                className={`group rounded-lg px-3 py-2.5 cursor-pointer border transition-colors ${
-                  isSelected
-                    ? 'bg-indigo-500/10 border-indigo-600/50'
-                    : 'bg-neutral-900/60 border-transparent hover:bg-neutral-900 hover:border-neutral-800'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    {editingId === s.id ? (
-                      <input
-                        autoFocus
-                        className="text-sm font-medium bg-neutral-800 border border-neutral-700 rounded px-1 py-0.5 w-full"
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        onBlur={() => commitEditing(s.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') commitEditing(s.id)
-                          if (e.key === 'Escape') setEditingId(null)
-                        }}
-                      />
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        {isActive && <StatusDot state="running" />}
-                        <div className="text-sm font-medium truncate">{s.name}</div>
+            {addOpen && (
+              <div className="flex gap-2 mt-3">
+                <input
+                  autoFocus
+                  className="flex-1 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] px-3 py-2 text-xs placeholder:text-[var(--text-faint)] focus:outline-none focus:border-[var(--accent)]"
+                  placeholder="vmess:// vless:// trojan:// ss://"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
+                />
+                <button
+                  className="rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-text)] px-3 text-xs font-medium transition-colors"
+                  onClick={handleAddLink}
+                >
+                  Add
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {filtered.length === 0 && (
+              <div className="text-center text-[var(--text-faint)] text-xs mt-10 px-4">
+                {servers.length === 0 ? 'No servers yet — click + to add one from a share link.' : 'No matches.'}
+              </div>
+            )}
+            {filtered.map((s) => {
+              const isSelected = s.id === selectedId
+              const isActive = isSelected && isRunning
+              return (
+                <div
+                  key={s.id}
+                  onClick={() => setSelectedId(s.id)}
+                  className={`group rounded-lg px-3 py-2.5 cursor-pointer border transition-colors ${
+                    isSelected
+                      ? 'bg-[var(--accent)]/10 border-[var(--accent)]/50'
+                      : 'bg-[var(--bg-panel)] border-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--border)]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      {editingId === s.id ? (
+                        <input
+                          autoFocus
+                          className="text-sm font-medium bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded px-1 py-0.5 w-full"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onBlur={() => commitEditing(s.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitEditing(s.id)
+                            if (e.key === 'Escape') setEditingId(null)
+                          }}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          {isActive && <StatusDot state="running" />}
+                          <div className="text-sm font-medium truncate">{s.name}</div>
+                        </div>
+                      )}
+                      <div className="text-[11px] text-[var(--text-faint)] truncate mt-0.5">
+                        {s.protocol} · {s.address}:{s.port}
                       </div>
-                    )}
-                    <div className="text-[11px] text-neutral-500 truncate mt-0.5">
-                      {s.protocol} · {s.address}:{s.port}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
+                        onClick={(e) => startEditing(s, e)}
+                        title="Rename"
+                      >
+                        <Icon path={icons.pencil} className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] flex items-center justify-center"
+                        onClick={(e) => handleDelete(s.id, e)}
+                        title="Remove"
+                      >
+                        <Icon path={icons.trash} className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <button
-                      className="w-6 h-6 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 flex items-center justify-center"
-                      onClick={(e) => startEditing(s, e)}
-                      title="Rename"
-                    >
-                      <Icon path={icons.pencil} className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      className="w-6 h-6 rounded text-neutral-500 hover:text-red-400 hover:bg-red-950 flex items-center justify-center"
-                      onClick={(e) => handleDelete(s.id, e)}
-                      title="Remove"
-                    >
-                      <Icon path={icons.trash} className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* Connect panel */}
-      <main className="flex-1 flex flex-col items-center justify-center gap-6 p-8 relative overflow-y-auto">
-        <div className="text-center">
-          <div className="text-sm text-neutral-500">{selected ? selected.name : 'No server selected'}</div>
-          {selected && (
-            <div className="text-xs text-neutral-700 mt-0.5">
-              {selected.protocol} · {selected.address}:{selected.port}
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={handleToggle}
-          disabled={isBusy || (!isRunning && !selected)}
-          className={`relative w-40 h-40 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed ${
-            isRunning
-              ? 'bg-indigo-500 shadow-[0_0_60px_-10px_rgba(99,102,241,0.7)]'
-              : 'bg-neutral-900 border border-neutral-800 hover:border-neutral-700'
-          }`}
-        >
-          {isBusy ? (
-            <div className="w-8 h-8 border-2 border-neutral-500 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Icon path={icons.power} className={`w-12 h-12 ${isRunning ? 'text-white' : 'text-neutral-500'}`} />
-          )}
-        </button>
-
-        <div className="text-center">
-          <div className="text-sm font-medium">
-            {isBusy ? (isRunning ? 'Disconnecting…' : 'Connecting…') : isRunning ? 'Connected' : 'Disconnected'}
+              )
+            })}
           </div>
-          {isRunning && <div className="text-xs text-neutral-600 mt-1">HTTP 127.0.0.1:2080 · SOCKS5 127.0.0.1:2081</div>}
-        </div>
+        </section>
 
-        {isRunning && (
+        {/* Connect panel */}
+        <main className="flex-1 flex flex-col items-center justify-center gap-6 p-8 relative overflow-y-auto">
+          <div className="text-center">
+            <div className="text-sm text-[var(--text-dim)]">{selected ? selected.name : 'No server selected'}</div>
+            {selected && (
+              <div className="text-xs text-[var(--text-faint)] mt-0.5">
+                {selected.protocol} · {selected.address}:{selected.port}
+              </div>
+            )}
+          </div>
+
           <button
-            onClick={handleTest}
-            disabled={testing}
-            className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-200 disabled:opacity-50 transition-colors"
+            onClick={handleToggle}
+            disabled={isBusy || (!isRunning && !selected)}
+            className={`relative w-40 h-40 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed ${
+              isRunning
+                ? 'bg-[var(--accent)] shadow-[0_0_60px_-10px_rgba(99,102,241,0.7)]'
+                : 'bg-[var(--bg-panel)] border border-[var(--border-strong)] hover:border-[var(--text-faint)]'
+            }`}
           >
-            <Icon path={icons.gauge} className="w-3.5 h-3.5" />
-            {testing ? 'Testing…' : 'Test connection'}
+            {isBusy ? (
+              <div className="w-8 h-8 border-2 border-[var(--text-faint)] border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Icon path={icons.power} className={`w-12 h-12 ${isRunning ? 'text-[var(--accent-text)]' : 'text-[var(--text-faint)]'}`} />
+            )}
           </button>
-        )}
 
-        <div className="w-full max-w-sm space-y-2">
-          {error && (
-            <div className="rounded-lg border border-red-800 bg-red-950 px-3 py-2 text-xs text-red-300 break-words">{error}</div>
-          )}
-          {testResult && (
-            <div
-              className={`rounded-lg border px-3 py-2 text-xs break-words ${
-                testResult.ok ? 'border-emerald-800 bg-emerald-950 text-emerald-300' : 'border-red-800 bg-red-950 text-red-300'
-              }`}
-            >
-              {testResult.ok ? '✓ ' : '✗ '}
-              {testResult.text}
+          <div className="text-center">
+            <div className="text-sm font-medium">
+              {isBusy ? (isRunning ? 'Disconnecting…' : 'Connecting…') : isRunning ? 'Connected' : 'Disconnected'}
             </div>
-          )}
-        </div>
+            {isRunning && <div className="text-xs text-[var(--text-faint)] mt-1">HTTP 127.0.0.1:2080 · SOCKS5 127.0.0.1:2081</div>}
+          </div>
 
-        {showLog && (
-          <pre className="w-full max-w-2xl max-h-64 overflow-auto rounded-lg border border-neutral-900 bg-neutral-925 p-3 text-[11px] text-neutral-500 whitespace-pre-wrap break-all" style={{ backgroundColor: '#0d0f13' }}>
-            {log || '(log is empty)'}
-          </pre>
-        )}
-      </main>
+          {isRunning && (
+            <button
+              onClick={handleTest}
+              disabled={testing}
+              className="flex items-center gap-1.5 text-xs text-[var(--text-dim)] hover:text-[var(--text)] disabled:opacity-50 transition-colors"
+            >
+              <Icon path={icons.gauge} className="w-3.5 h-3.5" />
+              {testing ? 'Testing…' : 'Test connection'}
+            </button>
+          )}
+
+          <div className="w-full max-w-sm space-y-2">
+            {error && (
+              <div className="rounded-lg border border-[var(--danger-border)] bg-[var(--danger-bg)] px-3 py-2 text-xs text-[var(--danger)] break-words">
+                {error}
+              </div>
+            )}
+            {testResult && (
+              <div
+                className={`rounded-lg border px-3 py-2 text-xs break-words ${
+                  testResult.ok
+                    ? 'border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success)]'
+                    : 'border-[var(--danger-border)] bg-[var(--danger-bg)] text-[var(--danger)]'
+                }`}
+              >
+                {testResult.ok ? '✓ ' : '✗ '}
+                {testResult.text}
+              </div>
+            )}
+          </div>
+
+          {showLog && (
+            <pre className="w-full max-w-2xl max-h-64 overflow-auto rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] p-3 text-[11px] text-[var(--text-faint)] whitespace-pre-wrap break-all">
+              {log || '(log is empty)'}
+            </pre>
+          )}
+        </main>
+      </div>
+
+      {aboutOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setAboutOpen(false)}>
+          <div
+            className="w-full max-w-sm rounded-xl bg-[var(--bg-panel)] border border-[var(--border)] p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-xl bg-[var(--accent)] text-[var(--accent-text)] flex items-center justify-center font-bold text-lg mx-auto mb-3">
+              K
+            </div>
+            <h2 className="text-lg font-semibold">Kite</h2>
+            <p className="text-xs text-[var(--text-faint)] mt-1">v{version.replace(/^v/, '')}</p>
+            <p className="text-sm text-[var(--text-dim)] mt-4">
+              A cross-platform desktop V2Ray/Xray client, built with Wails, Go and React.
+            </p>
+
+            <button
+              className="mt-4 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] underline underline-offset-2"
+              onClick={() => openExternal('https://github.com/freeb5d/kite')}
+            >
+              github.com/freeb5d/kite
+            </button>
+
+            <div className="mt-5 pt-4 border-t border-[var(--border)]">
+              <button
+                onClick={handleCheckUpdate}
+                disabled={checkingUpdate}
+                className="text-xs rounded-md border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] px-3 py-1.5 disabled:opacity-50 transition-colors"
+              >
+                {checkingUpdate ? 'Checking…' : 'Check for updates'}
+              </button>
+              {updateInfo && (
+                <p className="text-xs text-[var(--text-faint)] mt-2">
+                  {updateInfo.available ? `v${updateInfo.latest} is available` : "You're on the latest version"}
+                </p>
+              )}
+            </div>
+
+            <button
+              className="mt-5 text-xs text-[var(--text-faint)] hover:text-[var(--text)]"
+              onClick={() => setAboutOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

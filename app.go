@@ -10,15 +10,17 @@ import (
 
 	"github.com/freeb5d/kite/internal/profile"
 	"github.com/freeb5d/kite/internal/system"
+	"github.com/freeb5d/kite/internal/update"
 	"github.com/freeb5d/kite/internal/xray"
 )
 
 // App is the Wails bound struct: every exported method on it becomes
 // callable from the frontend via the generated JS bridge.
 type App struct {
-	ctx     context.Context
-	manager *xray.Manager
-	store   *profile.Store
+	ctx        context.Context
+	manager    *xray.Manager
+	store      *profile.Store
+	updateInfo update.Info
 }
 
 func NewApp() *App {
@@ -149,4 +151,43 @@ var version = "dev"
 
 func (a *App) Version() string {
 	return version
+}
+
+// --- Self-update methods (bound to frontend) ---
+
+// CheckForUpdate queries GitHub Releases for a newer build. The result is
+// cached on the App so a subsequent ApplyUpdate doesn't need the frontend
+// to round-trip the (unexported) download URL back to us.
+func (a *App) CheckForUpdate() (update.Info, error) {
+	info, err := update.Check(version)
+	if err != nil {
+		return update.Info{}, err
+	}
+	a.updateInfo = info
+	return info, nil
+}
+
+// ApplyUpdate downloads and installs the build found by the most recent
+// CheckForUpdate, then relaunches. On success this does not return: the
+// new process has already started and this one is about to exit. It only
+// returns when something failed before that point.
+func (a *App) ApplyUpdate() error {
+	if !a.updateInfo.Available {
+		return fmt.Errorf("no update available; call CheckForUpdate first")
+	}
+
+	if a.manager != nil {
+		_ = a.manager.Stop()
+	}
+	_ = system.ClearProxy()
+
+	if err := update.Apply(a.updateInfo); err != nil {
+		return err
+	}
+
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		os.Exit(0)
+	}()
+	return nil
 }
