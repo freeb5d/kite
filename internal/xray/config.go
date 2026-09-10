@@ -77,38 +77,64 @@ func buildJSON(server profile.Server) ([]byte, error) {
 	return json.Marshal(config)
 }
 
-// outboundSettings builds the protocol-specific "settings" object matching
-// the field names each of conf.VMessOutboundConfig / conf.VLessOutboundConfig /
-// conf.TrojanClientConfig / conf.ShadowsocksClientConfig expects.
+// outboundSettings builds the protocol-specific "settings" object using the
+// classic nested "vnext"/"servers" array shape (rather than the newer flat
+// address/port/id shorthand some conf.*OutboundConfig types also accept),
+// since the nested shape is understood by every xray-core version we might
+// end up building against.
 func outboundSettings(server profile.Server) (map[string]interface{}, error) {
 	switch server.Protocol {
 	case "vmess":
 		return map[string]interface{}{
-			"address":  server.Address,
-			"port":     server.Port,
-			"id":       server.UUID,
-			"security": firstNonEmpty(server.Extra["security"], "auto"),
+			"vnext": []map[string]interface{}{
+				{
+					"address": server.Address,
+					"port":    server.Port,
+					"users": []map[string]interface{}{
+						{
+							"id":       server.UUID,
+							"security": firstNonEmpty(server.Extra["security"], "auto"),
+						},
+					},
+				},
+			},
 		}, nil
 	case "vless":
 		return map[string]interface{}{
-			"address":    server.Address,
-			"port":       server.Port,
-			"id":         server.UUID,
-			"encryption": firstNonEmpty(server.Extra["encryption"], "none"),
-			"flow":       server.Extra["flow"],
+			"vnext": []map[string]interface{}{
+				{
+					"address": server.Address,
+					"port":    server.Port,
+					"users": []map[string]interface{}{
+						{
+							"id":         server.UUID,
+							"encryption": firstNonEmpty(server.Extra["encryption"], "none"),
+							"flow":       server.Extra["flow"],
+						},
+					},
+				},
+			},
 		}, nil
 	case "trojan":
 		return map[string]interface{}{
-			"address":  server.Address,
-			"port":     server.Port,
-			"password": server.Password,
+			"servers": []map[string]interface{}{
+				{
+					"address":  server.Address,
+					"port":     server.Port,
+					"password": server.Password,
+				},
+			},
 		}, nil
 	case "shadowsocks":
 		return map[string]interface{}{
-			"address":  server.Address,
-			"port":     server.Port,
-			"method":   server.Method,
-			"password": server.Password,
+			"servers": []map[string]interface{}{
+				{
+					"address":  server.Address,
+					"port":     server.Port,
+					"method":   server.Method,
+					"password": server.Password,
+				},
+			},
 		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q", server.Protocol)
