@@ -51,6 +51,17 @@ wails dev             # generates frontend/wailsjs/*, starts the dev app with ho
   add a share link, list servers, connect/disconnect, status display.
 - [wails.json](wails.json) — tells the Wails CLI how to build the frontend.
 
+## Releases
+
+`.github/workflows/release.yml` builds Kite for Windows, macOS, and Linux on
+GitHub-hosted runners (which already have Go/Node) and attaches the binaries
+to a GitHub Release. It fires on any pushed tag matching `v*`:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
 ## Known gaps / next steps
 
 - `internal/system` proxy calls aren't called from `App.Connect`/`Disconnect` yet.
