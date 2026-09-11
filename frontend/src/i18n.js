@@ -1,9 +1,9 @@
 export const LANGUAGES = [
   { code: 'en', label: 'English', dir: 'ltr' },
   { code: 'zh', label: '中文', dir: 'ltr' },
-  { code: 'fa', label: 'فارسی', dir: 'rtl' },
+  { code: 'fa', label: 'فارسی', dir: 'ltr' },
   { code: 'tr', label: 'Türkçe', dir: 'ltr' },
-  { code: 'ar', label: 'العربية', dir: 'rtl' },
+  { code: 'ar', label: 'العربية', dir: 'ltr' },
   { code: 'fr', label: 'Français', dir: 'ltr' },
   { code: 'de', label: 'Deutsch', dir: 'ltr' },
 ]
