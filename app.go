@@ -332,6 +332,16 @@ func (a *App) IsElevated() bool {
 // process on success. Only returns when the relaunch itself failed
 // (including the user cancelling the prompt).
 func (a *App) RestartElevated() error {
+	// Disconnect (stop xray/TUN, clear the proxy, remove kill switch
+	// firewall rules) *before* relaunching, not left for OnShutdown to do
+	// after Quit() -- that cleanup can take real time (TUN adapter
+	// teardown, two netsh calls for the kill switch), and every bit of it
+	// happening after Quit() eats into the freshly-relaunched process's
+	// fixed wait-for-old-instance-to-die buffer below.
+	if a.manager != nil && a.manager.Status().State == xray.StateRunning {
+		_ = a.Disconnect()
+	}
+
 	if err := system.RelaunchElevated(); err != nil {
 		return err
 	}
@@ -462,6 +472,10 @@ func (a *App) ApplyUpdate() error {
 		_ = a.manager.Stop()
 	}
 	_ = system.ClearProxy()
+	if a.killSwitchOn {
+		_ = system.DisableKillSwitch()
+		a.killSwitchOn = false
+	}
 
 	err := update.Apply(a.updateInfo, func(p update.Progress) {
 		wailsruntime.EventsEmit(a.ctx, "update:progress", map[string]int64{

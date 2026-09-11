@@ -3,6 +3,23 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.8.6 — Fix relaunch still not reopening when connected
+
+- **Fixed a real bug**: v0.8.4's fixed 1.5s wait for the old process to
+  quit before the new one registers itself wasn't always enough --
+  `RestartElevated` didn't disconnect (stop xray/TUN, clear the proxy,
+  remove kill switch firewall rules) before relaunching, leaving all of
+  that for `OnShutdown` to do *after* `Quit()`, eating into the new
+  process's wait window. If you were connected (TUN and/or kill switch
+  especially) when restarting elevated or updating, that cleanup could
+  easily take longer than 1.5s, so the new process still saw the old
+  one as "alive" and gave up -- same "nothing reopens" failure as
+  before, just needing a slower shutdown to trigger it.
+  `RestartElevated` now disconnects proactively before relaunching
+  (`ApplyUpdate` already stopped xray/cleared the proxy, but was
+  missing the kill switch cleanup -- added), and the wait window is
+  bumped to 3s for extra margin.
+
 ## v0.8.5 — Clearer error when antivirus deletes wintun.dll
 
 - TUN mode failing with a raw, unhelpful OS error like "The system

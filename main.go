@@ -32,7 +32,7 @@ const relaunchWaitFlag = "--kite-relaunch-wait"
 
 func main() {
 	if slices.Contains(os.Args[1:], relaunchWaitFlag) {
-		time.Sleep(1500 * time.Millisecond)
+		time.Sleep(3 * time.Second)
 	}
 
 	app := NewApp()
