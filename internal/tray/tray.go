@@ -31,9 +31,10 @@ func Start(iconPNG []byte, onShow, onDisconnect, onQuit func()) {
 		systray.SetIcon(icon)
 		systray.SetTitle("Kite")
 		systray.SetTooltip("Kite")
-		// Left-click the tray icon to restore the window, in addition to
-		// the "Show Kite" menu item (right-click still opens the menu).
+		// Left-click restores the window. Right-click doesn't show the
+		// menu on its own in this library -- it has to be shown explicitly.
 		systray.SetOnClick(func(menu systray.IMenu) { onShow() })
+		systray.SetOnRClick(func(menu systray.IMenu) { menu.ShowMenu() })
 
 		mShow := systray.AddMenuItem("Show Kite", "Show the Kite window")
 		mShow.Click(onShow)
