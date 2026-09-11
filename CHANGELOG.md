@@ -3,7 +3,37 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
-## Unreleased
+## v0.8.3 — Fix duplicate windows from Restart as admin / self-update
+
+Two real bugs, both around the same root cause:
+
+- Since closing the window keeps Kite running in the tray (v0.8.0)
+  instead of quitting, launching the exe again (e.g. double-clicking
+  it, or a "Restart as admin"/self-update relaunch) risked a second
+  process colliding with the still-running first one over native
+  resources -- WinTun, the system proxy registry keys -- producing
+  native errors like "An attempt was made to perform an initialization
+  operation when initialization has already been completed" and two
+  overlapping windows. Added Wails' `SingleInstanceLock`: a second
+  launch now just asks the already-running instance to show itself.
+- That exposed a second bug: "Restart as admin" and the self-update
+  relaunch both exited the old process via a raw `os.Exit(0)`, which
+  bypasses Wails' own shutdown path -- including whatever releases the
+  `SingleInstanceLock`'s IPC listener. The freshly-launched new process
+  (elevated, or updated) could still see the dying old one as "already
+  running" and get treated as a second instance instead of actually
+  starting, leaving two windows open with neither one elevated or
+  updated. Both now quit via `wailsruntime.Quit`, matching how the
+  tray's own Quit already worked correctly.
+
+## v0.8.1 — Fix tray right-click menu
+
+- The system tray added in v0.8.0 didn't show its menu on
+  right-click -- `energye/systray` doesn't do that automatically, it
+  has to be wired up explicitly via `SetOnRClick` calling
+  `menu.ShowMenu()`.
+
+## v0.8.0 — Kill switch, system tray, right-click paste fix
 
 - **Fixed right-click paste**: Wails disables the browser's native
   right-click context menu in production builds by default, so
@@ -27,30 +57,6 @@ All notable changes to Kite are documented here. Versions correspond to
   running. The tray icon's menu has Show Kite, Disconnect (shown only
   while connected), and Quit Kite; left-clicking the icon also restores
   the window. Only "Quit Kite" actually exits the app.
-
-## v0.8.3 — Fix duplicate windows from Restart as admin / self-update
-
-- **Fixed a real bug**: "Restart as admin" and the self-update relaunch
-  both exited the old process via a raw `os.Exit(0)`, which bypasses
-  Wails' own shutdown path -- including whatever releases the
-  `SingleInstanceLock` added in v0.8.2. The freshly-launched new
-  process could still see the dying old one as "already running" and
-  get treated as a second instance instead of actually starting,
-  leaving two windows open with neither one elevated (or updated).
-  Both now quit via `wailsruntime.Quit`, matching how the tray's own
-  Quit already worked correctly.
-
-## v0.8.2 — Single-instance lock
-
-- **Fixed a real bug**: since closing the window now keeps Kite running
-  in the tray (v0.8.0) instead of quitting, launching the exe again
-  (e.g. double-clicking it) started a *second* process. Both processes
-  then fought over the same native resources -- WinTun, the system
-  proxy registry keys -- producing native errors like "An attempt was
-  made to perform an initialization operation when initialization has
-  already been completed" and two overlapping windows. Added Wails'
-  `SingleInstanceLock`: a second launch now just asks the already-running
-  instance to show its window instead of starting a new process.
 
 ## v0.7.1 — Real traffic stats
 
