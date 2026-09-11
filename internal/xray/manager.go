@@ -11,6 +11,7 @@ import (
 
 	"github.com/freeb5d/kite/internal/profile"
 	"github.com/freeb5d/kite/internal/system"
+	"github.com/xtls/xray-core/app/stats"
 	"github.com/xtls/xray-core/core"
 
 	// Registers every protocol/transport xray-core ships (vmess, vless,
@@ -42,6 +43,8 @@ type Manager struct {
 	status          Status
 	instance        *core.Instance
 	exceptionRoutes []string
+	uplinkCounter   stats.Counter
+	downlinkCounter stats.Counter
 }
 
 func NewManager() *Manager {
@@ -112,6 +115,16 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 	m.instance = instance
 	m.exceptionRoutes = addedRoutes
 	m.status = Status{State: StateRunning, Server: server.Name, Mode: mode}
+
+	m.uplinkCounter, m.downlinkCounter = nil, nil
+	if sm := instance.GetFeature(stats.ManagerType()); sm != nil {
+		if manager, ok := sm.(stats.Manager); ok {
+			// Registered by the "proxy" outbound because buildJSON turns on
+			// policy.system.statsOutboundUplink/Downlink -- see config.go.
+			m.uplinkCounter = manager.GetCounter("outbound>>>proxy>>>traffic>>>uplink")
+			m.downlinkCounter = manager.GetCounter("outbound>>>proxy>>>traffic>>>downlink")
+		}
+	}
 	return nil
 }
 
@@ -131,6 +144,7 @@ func (m *Manager) Stop() error {
 
 	err := m.instance.Close()
 	m.instance = nil
+	m.uplinkCounter, m.downlinkCounter = nil, nil
 	m.status = Status{State: StateStopped}
 	return err
 }

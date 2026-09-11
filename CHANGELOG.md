@@ -3,6 +3,18 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.7.1 — Real traffic stats
+
+- **Traffic stats are wired up for real** — `internal/xray/stats.go`'s
+  `Traffic()` used to always return zero. `buildJSON` now turns on
+  `policy.system.statsOutboundUplink`/`Downlink` so xray-core registers
+  the "proxy" outbound's traffic counters, and `Manager` reads them
+  from its own `stats.Manager` feature.
+- The connect panel gets a collapsible "Show more" panel (closed by
+  default) with **Live traffic** (current up/down speed, polled once a
+  second while connected) and **Total traffic** (cumulative session
+  bytes).
+
 ## v0.7.0 — Show the embedded xray-core version
 
 - The About panel now shows the embedded xray-core version next to

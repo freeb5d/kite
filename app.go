@@ -258,6 +258,13 @@ func (a *App) Status() xray.Status {
 	return a.manager.Status()
 }
 
+// Traffic returns the current session's cumulative uplink/downlink byte
+// counters, for the live traffic display. The frontend polls this and
+// diffs successive calls to derive a speed.
+func (a *App) Traffic() xray.Traffic {
+	return a.manager.Traffic()
+}
+
 // Platform reports the OS Kite is running on, so the frontend can hide
 // the TUN mode option where it isn't supported yet.
 func (a *App) Platform() string {

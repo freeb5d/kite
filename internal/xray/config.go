@@ -135,6 +135,16 @@ func buildJSON(server profile.Server, mode Mode) ([]byte, error) {
 				"protocol": "freedom",
 			},
 		},
+		// Enables the "proxy" outbound's traffic counters (stats.Manager
+		// registers "outbound>>>proxy>>>traffic>>>uplink"/"downlink"),
+		// read by Manager.Traffic() for the live traffic display.
+		"stats": map[string]interface{}{},
+		"policy": map[string]interface{}{
+			"system": map[string]interface{}{
+				"statsOutboundUplink":   true,
+				"statsOutboundDownlink": true,
+			},
+		},
 	}
 
 	return json.Marshal(config)

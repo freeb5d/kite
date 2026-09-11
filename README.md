@@ -46,7 +46,7 @@ in one click.
 - **Transports**: TCP and WebSocket, with TLS/REALITY security detection straight from the link
 - **System proxy integration** — Connect/Disconnect toggles the OS HTTP proxy automatically (per-user registry on Windows, no elevation needed)
 - **TUN mode (Windows)** — routes all system traffic through a virtual network adapter (WinTun, bundled), instead of just apps that honor a proxy setting. Needs administrator privileges; Kite can relaunch itself elevated with one click
-- **Built-in diagnostics** — a Test button makes a real request through the tunnel and reports the actual result; a log viewer surfaces xray-core's own debug log inline
+- **Built-in diagnostics** — a Test button makes a real request through the tunnel and reports the actual result; a log viewer surfaces xray-core's own debug log inline; a "Show more" panel expands to live upload/download speed and session totals, read from xray-core's own stats manager
 - **Self-updating** — checks GitHub Releases on launch, one click downloads, swaps, and relaunches (About panel shows both Kite's and the embedded xray-core's version)
 - **Dark / light themes**, with a searchable server list, inline rename, and one-click remove
 - **7 languages** — English (default), 中文, فارسی, Türkçe, العربية, Français, Deutsch, switchable from the sidebar (Persian uses the bundled Vazirmatn font)
@@ -123,8 +123,6 @@ the frontend once `wails dev`/`wails build` generates `frontend/wailsjs/go/main/
 - **macOS is Apple Silicon (arm64) only** — no Intel build. If that's needed, add a
   `darwin/amd64` matrix entry in `.github/workflows/release.yml` alongside the
   `darwin/arm64` one.
-- **Traffic stats are a stub** — `internal/xray/stats.go`'s `Traffic()` always returns
-  zero; it needs to read from the running instance's stats manager instead.
 - **TUN mode is Windows-only** and IPv4-only for now — the exception route that keeps
   xray's own upstream connection from looping through the TUN adapter
   (`internal/system/route_windows.go`) only covers resolved IPv4 addresses; a server
