@@ -136,6 +136,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('dir', getDir(lang))
+    document.documentElement.setAttribute('data-lang', lang)
     try {
       localStorage.setItem('kite-lang', lang)
     } catch {

@@ -40,7 +40,7 @@ Once installed, it checks for new releases on startup and can update itself in o
 - **Built-in diagnostics** — a Test button makes a real request through the tunnel and reports the actual result; a log viewer surfaces xray-core's own debug log inline
 - **Self-updating** — checks GitHub Releases on launch, one click downloads, swaps, and relaunches
 - **Dark / light themes**, with a searchable server list, inline rename, and one-click remove
-- **7 languages** — English (default), 中文, فارسی, Türkçe, العربية, Français, Deutsch, switchable from the sidebar
+- **7 languages** — English (default), 中文, فارسی, Türkçe, العربية, Français, Deutsch, switchable from the sidebar (Persian uses the bundled Vazirmatn font)
 
 ## Building from source
 
