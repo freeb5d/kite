@@ -28,6 +28,18 @@ All notable changes to Kite are documented here. Versions correspond to
   while connected), and Quit Kite; left-clicking the icon also restores
   the window. Only "Quit Kite" actually exits the app.
 
+## v0.8.3 — Fix duplicate windows from Restart as admin / self-update
+
+- **Fixed a real bug**: "Restart as admin" and the self-update relaunch
+  both exited the old process via a raw `os.Exit(0)`, which bypasses
+  Wails' own shutdown path -- including whatever releases the
+  `SingleInstanceLock` added in v0.8.2. The freshly-launched new
+  process could still see the dying old one as "already running" and
+  get treated as a second instance instead of actually starting,
+  leaving two windows open with neither one elevated (or updated).
+  Both now quit via `wailsruntime.Quit`, matching how the tray's own
+  Quit already worked correctly.
+
 ## v0.8.2 — Single-instance lock
 
 - **Fixed a real bug**: since closing the window now keeps Kite running

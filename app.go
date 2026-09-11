@@ -335,10 +335,15 @@ func (a *App) RestartElevated() error {
 	if err := system.RelaunchElevated(); err != nil {
 		return err
 	}
-	go func() {
-		time.Sleep(300 * time.Millisecond)
-		os.Exit(0)
-	}()
+	// Quit via Wails' own shutdown path (which releases the
+	// SingleInstanceLock's IPC listener as part of tearing down), not a
+	// raw os.Exit -- an abrupt kill left that listener around long enough
+	// that the freshly-elevated process (launched just above) could still
+	// see this instance as "already running" and get treated as a second
+	// instance instead of starting for real, leaving two windows open
+	// with neither one actually elevated.
+	a.quitting = true
+	wailsruntime.Quit(a.ctx)
 	return nil
 }
 
@@ -468,9 +473,11 @@ func (a *App) ApplyUpdate() error {
 		return err
 	}
 
-	go func() {
-		time.Sleep(300 * time.Millisecond)
-		os.Exit(0)
-	}()
+	// See RestartElevated's comment: quit via Wails' own shutdown path,
+	// not a raw os.Exit, so the SingleInstanceLock's IPC listener is
+	// actually released before the already-started new process gets far
+	// enough to check it.
+	a.quitting = true
+	wailsruntime.Quit(a.ctx)
 	return nil
 }
