@@ -21,7 +21,12 @@
   font-display: swap;
 }
 
-[data-lang='fa'] {
+/* [data-lang='fa'] covers the whole app when Persian is the active
+   language; [lang='fa'] covers individual Persian text that shows up
+   regardless of the active language, e.g. "فارسی" as a label inside
+   the language picker while some other language is selected. */
+[data-lang='fa'],
+[lang='fa'] {
   font-family: 'Vazirmatn', ui-sans-serif, system-ui, sans-serif;
 }
 

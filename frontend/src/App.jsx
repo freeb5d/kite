@@ -187,6 +187,13 @@ export default function App() {
   const [mode, setMode] = useState('proxy')
   const [platform, setPlatform] = useState('')
   const [elevated, setElevated] = useState(true)
+  const [killSwitch, setKillSwitch] = useState(() => {
+    try {
+      return localStorage.getItem('kite-killswitch') === '1'
+    } catch {
+      return false
+    }
+  })
   const [lang, setLang] = useState(() => {
     try {
       return localStorage.getItem('kite-lang') || 'en'
@@ -206,6 +213,14 @@ export default function App() {
       // ignore (private browsing / storage disabled)
     }
   }, [lang])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('kite-killswitch', killSwitch ? '1' : '0')
+    } catch {
+      // ignore (private browsing / storage disabled)
+    }
+  }, [killSwitch])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -329,6 +344,7 @@ export default function App() {
   const selected = servers.find((s) => s.id === selectedId) || null
   const isRunning = status.state === 'running'
   const isBusy = pending || status.state === 'starting'
+  const needsElevation = (mode === 'tun' || killSwitch) && !elevated
 
   const [trafficOpen, setTrafficOpen] = useState(false)
   const [traffic, setTraffic] = useState({ uplink: 0, downlink: 0 })
@@ -420,7 +436,7 @@ export default function App() {
     }
     setPending(true)
     try {
-      await Connect(selected.id, mode)
+      await Connect(selected.id, mode, killSwitch)
       setStatus(await Status())
       handleTest()
     } catch (err) {
@@ -591,6 +607,7 @@ export default function App() {
                   {LANGUAGES.map((l) => (
                     <button
                       key={l.code}
+                      lang={l.code}
                       onClick={() => {
                         setLang(l.code)
                         setLangOpen(false)
@@ -812,10 +829,23 @@ export default function App() {
             </div>
           )}
 
-          {platform === 'windows' && mode === 'tun' && !elevated && !isRunning && (
+          {platform === 'windows' && !isRunning && (
+            <label className="flex items-center gap-2 text-xs text-[var(--text-dim)] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={killSwitch}
+                onChange={(e) => setKillSwitch(e.target.checked)}
+                className="w-3.5 h-3.5 rounded accent-[var(--accent)]"
+              />
+              <Icon path={icons.shield} className="w-3.5 h-3.5 text-[var(--text-faint)]" />
+              {t('killSwitch')}
+            </label>
+          )}
+
+          {platform === 'windows' && needsElevation && !isRunning && (
             <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] px-3 py-2 text-xs text-[var(--text-dim)]">
               <Icon path={icons.shield} className="w-4 h-4 shrink-0 text-[var(--text-faint)]" />
-              <span>{t('tunNeedsAdmin')}</span>
+              <span>{mode === 'tun' ? t('tunNeedsAdmin') : t('killSwitchNeedsAdmin')}</span>
               <button onClick={handleRestartElevated} className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium shrink-0">
                 {t('restartAsAdmin')}
               </button>
@@ -824,7 +854,7 @@ export default function App() {
 
           <button
             onClick={handleToggle}
-            disabled={isBusy || (!isRunning && !selected) || (mode === 'tun' && !elevated && !isRunning)}
+            disabled={isBusy || (!isRunning && !selected) || (needsElevation && !isRunning)}
             className={`relative w-40 h-40 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed ${
               isRunning
                 ? 'bg-[var(--accent)] shadow-[0_0_60px_-10px_rgba(99,102,241,0.7)]'

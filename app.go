@@ -24,10 +24,11 @@ import (
 // App is the Wails bound struct: every exported method on it becomes
 // callable from the frontend via the generated JS bridge.
 type App struct {
-	ctx        context.Context
-	manager    *xray.Manager
-	store      *profile.Store
-	updateInfo update.Info
+	ctx          context.Context
+	manager      *xray.Manager
+	store        *profile.Store
+	updateInfo   update.Info
+	killSwitchOn bool
 }
 
 func NewApp() *App {
@@ -48,6 +49,9 @@ func (a *App) shutdown(ctx context.Context) {
 		a.manager.Stop()
 	}
 	_ = system.ClearProxy()
+	if a.killSwitchOn {
+		_ = system.DisableKillSwitch()
+	}
 }
 
 // --- Server profile methods (bound to frontend) ---
@@ -219,7 +223,11 @@ func (a *App) RenameProfile(id string, name string) (profile.Server, error) {
 // mode ("proxy" or "tun"; anything else is treated as "proxy"). TUN mode
 // is currently Windows-only and requires the process to already be
 // running elevated -- see Platform/IsElevated/RestartElevated below.
-func (a *App) Connect(serverID string, mode string) error {
+// killSwitch, when true, blocks all outbound traffic except Kite's own
+// (which is how xray itself reaches the VPN server) and loopback while
+// connected -- see internal/system/killswitch_windows.go. It's currently
+// Windows-only and needs the same elevation as TUN mode.
+func (a *App) Connect(serverID string, mode string, killSwitch bool) error {
 	server, err := a.store.Get(serverID)
 	if err != nil {
 		return err
@@ -236,6 +244,15 @@ func (a *App) Connect(serverID string, mode string) error {
 		xrayMode = xray.ModeTUN
 	}
 
+	if killSwitch {
+		if goruntime.GOOS != "windows" {
+			return fmt.Errorf("kill switch is currently only supported on Windows")
+		}
+		if !system.IsElevated() {
+			return fmt.Errorf("kill switch needs administrator privileges -- use \"Restart as admin\" and try again")
+		}
+	}
+
 	if err := a.manager.Start(server, xrayMode); err != nil {
 		return err
 	}
@@ -246,11 +263,24 @@ func (a *App) Connect(serverID string, mode string) error {
 			return err
 		}
 	}
+
+	if killSwitch {
+		if err := system.EnableKillSwitch(); err != nil {
+			_ = system.ClearProxy()
+			_ = a.manager.Stop()
+			return fmt.Errorf("enable kill switch: %w", err)
+		}
+	}
+	a.killSwitchOn = killSwitch
 	return nil
 }
 
 func (a *App) Disconnect() error {
 	_ = system.ClearProxy()
+	if a.killSwitchOn {
+		_ = system.DisableKillSwitch()
+		a.killSwitchOn = false
+	}
 	return a.manager.Stop()
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
@@ -26,6 +27,12 @@ func main() {
 		OnShutdown:       app.shutdown,
 		Bind: []interface{}{
 			app,
+		},
+		// Wails hides the WebView2 native right-click context menu by
+		// default on Windows, which meant there was no way to Paste
+		// into a text field with the mouse. Restore it.
+		Windows: &windows.Options{
+			EnableDefaultContextMenu: true,
 		},
 	})
 

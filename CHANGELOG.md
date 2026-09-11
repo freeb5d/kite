@@ -3,6 +3,25 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## Unreleased
+
+- **Fixed right-click paste**: Wails hides the WebView2 native context
+  menu by default on Windows, so right-click did nothing anywhere in
+  the app -- including pasting a link into the Add Server field.
+  Re-enabled via `windows.Options{EnableDefaultContextMenu: true}`.
+- **Persian text now always uses Vazirmatn**, not just when Persian is
+  the active app language -- e.g. "فارسی" as a label inside the
+  language picker while some other language is selected now renders
+  correctly too (`[lang='fa']` alongside the existing `[data-lang='fa']`).
+- **Kill switch (Windows)**: a new toggle next to Proxy/TUN blocks all
+  outbound traffic except Kite's own while connected, via a
+  `netsh advfirewall` rule pair (allow Kite's own process, block
+  everything else) -- loopback is exempt from Windows Firewall
+  filtering regardless, so the local HTTP/SOCKS proxy keeps working.
+  Needs administrator privileges, same as TUN mode. The block rules are
+  only removed on a deliberate Disconnect (or app quit) -- not if xray
+  crashes while connected, which is the point of a kill switch.
+
 ## v0.7.1 — Real traffic stats
 
 - **Traffic stats are wired up for real** — `internal/xray/stats.go`'s
