@@ -15,6 +15,7 @@ import {
   Disconnect,
   Status,
   Version,
+  XrayVersion,
   TestConnection,
   RecentLog,
   CheckForUpdate,
@@ -160,6 +161,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null)
   const [pending, setPending] = useState(false)
   const [version, setVersion] = useState('')
+  const [xrayVersion, setXrayVersion] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editingName, setEditingName] = useState('')
   const [query, setQuery] = useState('')
@@ -222,6 +224,7 @@ export default function App() {
       .catch((err) => setError(errorText(err)))
     Status().then(setStatus).catch(() => {})
     Version().then(setVersion).catch(() => {})
+    XrayVersion().then(setXrayVersion).catch(() => {})
     CheckForUpdate().then(setUpdateInfo).catch(() => {})
     Platform().then(setPlatform).catch(() => {})
     IsElevated().then(setElevated).catch(() => {})
@@ -854,7 +857,10 @@ export default function App() {
           >
             <img src={logo} alt="Kite" className="w-14 h-14 rounded-xl mx-auto mb-3" />
             <h2 className="text-lg font-semibold">Kite</h2>
-            <p className="text-xs text-[var(--text-faint)] mt-1">v{version.replace(/^v/, '')}</p>
+            <p className="text-xs text-[var(--text-faint)] mt-1">
+              v{version.replace(/^v/, '')}
+              {xrayVersion && <> · xray-core {xrayVersion}</>}
+            </p>
             <p className="text-sm text-[var(--text-dim)] mt-4">
               {t('aboutDescription')}
             </p>

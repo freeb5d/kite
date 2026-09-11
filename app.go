@@ -367,6 +367,11 @@ func (a *App) Version() string {
 	return version
 }
 
+// XrayVersion returns the embedded xray-core version, for the About panel.
+func (a *App) XrayVersion() string {
+	return xray.CoreVersion()
+}
+
 // --- Self-update methods (bound to frontend) ---
 
 // CheckForUpdate queries GitHub Releases for a newer build. The result is

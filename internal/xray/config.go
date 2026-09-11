@@ -30,6 +30,12 @@ const (
 	ModeTUN   Mode = "tun"
 )
 
+// CoreVersion returns the embedded xray-core version (e.g. "1.8.24"),
+// for display in the About panel.
+func CoreVersion() string {
+	return core.Version()
+}
+
 // LogFilePath returns where xray-core's own error log is written, so it can
 // be surfaced in the UI when a connection silently fails to actually route
 // traffic (started fine, but the outbound handshake/dial is failing).

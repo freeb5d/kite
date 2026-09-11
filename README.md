@@ -47,7 +47,7 @@ in one click.
 - **System proxy integration** — Connect/Disconnect toggles the OS HTTP proxy automatically (per-user registry on Windows, no elevation needed)
 - **TUN mode (Windows)** — routes all system traffic through a virtual network adapter (WinTun, bundled), instead of just apps that honor a proxy setting. Needs administrator privileges; Kite can relaunch itself elevated with one click
 - **Built-in diagnostics** — a Test button makes a real request through the tunnel and reports the actual result; a log viewer surfaces xray-core's own debug log inline
-- **Self-updating** — checks GitHub Releases on launch, one click downloads, swaps, and relaunches
+- **Self-updating** — checks GitHub Releases on launch, one click downloads, swaps, and relaunches (About panel shows both Kite's and the embedded xray-core's version)
 - **Dark / light themes**, with a searchable server list, inline rename, and one-click remove
 - **7 languages** — English (default), 中文, فارسی, Türkçe, العربية, Français, Deutsch, switchable from the sidebar (Persian uses the bundled Vazirmatn font)
 

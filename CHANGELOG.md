@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.7.0 — Show the embedded xray-core version
+
+- The About panel now shows the embedded xray-core version next to
+  Kite's own version (e.g. "v0.7.0 · xray-core 26.3.27"), via
+  `core.Version()` from xray-core itself.
+
 ## v0.6.9 — macOS builds are back
 
 - Re-enabled macOS in the release matrix, on `macos-14` (Apple Silicon)
