@@ -56,7 +56,12 @@ func IsSubscriptionURL(input string) bool {
 //
 // Lines that fail to parse are skipped rather than failing the whole
 // subscription, since a subscription commonly mixes supported and
-// unsupported (e.g. ss2022, vmess with unusual fields) entries.
+// unsupported (e.g. ss2022, vmess with unusual fields) entries. Many
+// providers also throw in a few non-functional "info" entries disguised
+// as real links -- e.g. a vless:// whose host is literally
+// "dontUseThis" -- just to surface plan/expiry/traffic details inside
+// clients that list every node. Those are recognized by isInfoNode and
+// dropped rather than imported as dead servers.
 func ParseSubscription(body string) ([]Server, []error) {
 	content := strings.TrimSpace(body)
 
@@ -76,6 +81,9 @@ func ParseSubscription(body string) ([]Server, []error) {
 			errs = append(errs, fmt.Errorf("%.40s...: %w", line, err))
 			continue
 		}
+		if isInfoNode(server) {
+			continue
+		}
 		servers = append(servers, server)
 	}
 
@@ -83,6 +91,34 @@ func ParseSubscription(body string) ([]Server, []error) {
 		errs = append(errs, fmt.Errorf("subscription content was empty"))
 	}
 	return servers, errs
+}
+
+// isInfoNode reports whether a parsed entry looks like one of the fake
+// "informational" nodes some subscription providers mix into the real
+// server list -- e.g. a vless:// link whose host is a placeholder like
+// "dontUseThis" and whose name carries plan/expiry/traffic text instead
+// of a real location, purely so it shows up as a row in clients that
+// don't otherwise expose that info.
+func isInfoNode(s Server) bool {
+	host := strings.ToLower(s.Address)
+	for _, marker := range []string{"dontuse", "don't use", "do-not-use", "not-a-server", "placeholder", "noconnect"} {
+		if strings.Contains(host, marker) {
+			return true
+		}
+	}
+	name := strings.ToLower(s.Name)
+	nameMarkers := []string{
+		"expire", "expiry", "expir", // English
+		"remain", "remaining", "traffic", "data used", "days left",
+		"انقضا", "باقیمانده", "حجم", "ترافیک", // Persian: expiry, remaining, volume, traffic
+		"到期", "剩余", "流量", // Chinese: expires, remaining, traffic
+	}
+	for _, marker := range nameMarkers {
+		if strings.Contains(name, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func tryBase64(s string) (string, bool) {

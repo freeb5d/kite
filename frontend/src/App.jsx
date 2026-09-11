@@ -92,6 +92,63 @@ function IconButton({ onClick, title, active, children }) {
   )
 }
 
+function ServerRow({ s, isSelected, isRunning, editingId, editingName, setEditingName, onSelect, onStartEdit, onCommitEdit, onCancelEdit, onDelete, t }) {
+  const isActive = isSelected && isRunning
+  return (
+    <div
+      onClick={onSelect}
+      className={`group rounded-lg px-3 py-2.5 cursor-pointer border transition-colors ${
+        isSelected
+          ? 'bg-[var(--accent)]/10 border-[var(--accent)]/50'
+          : 'bg-[var(--bg-panel)] border-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--border)]'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          {editingId === s.id ? (
+            <input
+              autoFocus
+              className="text-sm font-medium bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded px-1 py-0.5 w-full"
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onBlur={onCommitEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') onCommitEdit()
+                if (e.key === 'Escape') onCancelEdit()
+              }}
+            />
+          ) : (
+            <div className="flex items-center gap-1.5">
+              {isActive && <StatusDot state="running" />}
+              <div className="text-sm font-medium truncate">{s.name}</div>
+            </div>
+          )}
+          <div className="text-[11px] text-[var(--text-faint)] truncate mt-0.5">
+            {s.protocol} · {s.address}:{s.port}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          <button
+            className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
+            onClick={onStartEdit}
+            title={t('rename')}
+          >
+            <Icon path={icons.pencil} className="w-3.5 h-3.5" />
+          </button>
+          <button
+            className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] flex items-center justify-center"
+            onClick={onDelete}
+            title={t('remove')}
+          >
+            <Icon path={icons.trash} className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [servers, setServers] = useState([])
   const [link, setLink] = useState('')
@@ -180,6 +237,37 @@ export default function App() {
       (s) => s.name?.toLowerCase().includes(q) || s.address?.toLowerCase().includes(q) || s.protocol?.toLowerCase().includes(q),
     )
   }, [servers, query])
+
+  // Servers imported from a subscription URL all share the same
+  // extra.subGroup id -- fold those into one collapsible row instead of
+  // flooding the list (a subscription can carry hundreds of servers).
+  const { standalone, groups } = useMemo(() => {
+    const groupMap = new Map()
+    const standalone = []
+    for (const s of filtered) {
+      const groupId = s.extra?.subGroup
+      if (!groupId) {
+        standalone.push(s)
+        continue
+      }
+      if (!groupMap.has(groupId)) {
+        groupMap.set(groupId, { id: groupId, name: s.extra?.subGroupName || 'Subscription', servers: [] })
+      }
+      groupMap.get(groupId).servers.push(s)
+    }
+    return { standalone, groups: [...groupMap.values()] }
+  }, [filtered])
+
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set())
+  const searching = query.trim().length > 0
+  function toggleGroup(id) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const selected = servers.find((s) => s.id === selectedId) || null
   const isRunning = status.state === 'running'
@@ -469,61 +557,66 @@ export default function App() {
                 {servers.length === 0 ? t('noServersYet') : t('noMatches')}
               </div>
             )}
-            {filtered.map((s) => {
-              const isSelected = s.id === selectedId
-              const isActive = isSelected && isRunning
+            {standalone.map((s) => (
+              <ServerRow
+                key={s.id}
+                s={s}
+                isSelected={s.id === selectedId}
+                isRunning={isRunning}
+                editingId={editingId}
+                editingName={editingName}
+                setEditingName={setEditingName}
+                onSelect={() => setSelectedId(s.id)}
+                onStartEdit={(e) => startEditing(s, e)}
+                onCommitEdit={() => commitEditing(s.id)}
+                onCancelEdit={() => setEditingId(null)}
+                onDelete={(e) => handleDelete(s.id, e)}
+                t={t}
+              />
+            ))}
+            {groups.map((g) => {
+              const isOpen = searching || expandedGroups.has(g.id)
+              const activeInGroup = g.servers.some((s) => s.id === selectedId)
               return (
-                <div
-                  key={s.id}
-                  onClick={() => setSelectedId(s.id)}
-                  className={`group rounded-lg px-3 py-2.5 cursor-pointer border transition-colors ${
-                    isSelected
-                      ? 'bg-[var(--accent)]/10 border-[var(--accent)]/50'
-                      : 'bg-[var(--bg-panel)] border-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--border)]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
+                <div key={g.id} className="space-y-1">
+                  <div
+                    onClick={() => toggleGroup(g.id)}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2.5 cursor-pointer border transition-colors ${
+                      activeInGroup
+                        ? 'bg-[var(--accent)]/10 border-[var(--accent)]/50'
+                        : 'bg-[var(--bg-panel)] border-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--border)]'
+                    }`}
+                  >
+                    <Icon
+                      path="m9 18 6-6-6-6"
+                      className={`w-3.5 h-3.5 shrink-0 text-[var(--text-faint)] transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                    />
                     <div className="min-w-0 flex-1">
-                      {editingId === s.id ? (
-                        <input
-                          autoFocus
-                          className="text-sm font-medium bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded px-1 py-0.5 w-full"
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          onBlur={() => commitEditing(s.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') commitEditing(s.id)
-                            if (e.key === 'Escape') setEditingId(null)
-                          }}
-                        />
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          {isActive && <StatusDot state="running" />}
-                          <div className="text-sm font-medium truncate">{s.name}</div>
-                        </div>
-                      )}
-                      <div className="text-[11px] text-[var(--text-faint)] truncate mt-0.5">
-                        {s.protocol} · {s.address}:{s.port}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <button
-                        className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
-                        onClick={(e) => startEditing(s, e)}
-                        title={t('rename')}
-                      >
-                        <Icon path={icons.pencil} className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] flex items-center justify-center"
-                        onClick={(e) => handleDelete(s.id, e)}
-                        title={t('remove')}
-                      >
-                        <Icon path={icons.trash} className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="text-sm font-medium truncate">{g.name}</div>
+                      <div className="text-[11px] text-[var(--text-faint)] truncate mt-0.5">{g.servers.length} servers</div>
                     </div>
                   </div>
+                  {isOpen && (
+                    <div className="pl-3 space-y-1 border-l border-[var(--border)] ml-4">
+                      {g.servers.map((s) => (
+                        <ServerRow
+                          key={s.id}
+                          s={s}
+                          isSelected={s.id === selectedId}
+                          isRunning={isRunning}
+                          editingId={editingId}
+                          editingName={editingName}
+                          setEditingName={setEditingName}
+                          onSelect={() => setSelectedId(s.id)}
+                          onStartEdit={(e) => startEditing(s, e)}
+                          onCommitEdit={() => commitEditing(s.id)}
+                          onCancelEdit={() => setEditingId(null)}
+                          onDelete={(e) => handleDelete(s.id, e)}
+                          t={t}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}

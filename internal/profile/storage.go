@@ -48,20 +48,28 @@ func (s *Store) Get(id string) (Server, error) {
 	return Server{}, fmt.Errorf("no server with id %q", id)
 }
 
-func (s *Store) Add(server Server) error {
+// Add persists a new server, assigning it an ID if it doesn't already
+// have one, and returns the stored copy (with that ID set) so the
+// caller can hand back something actually usable by Get/Connect --
+// the server passed in is a value, so its own ID field is never
+// visible to the caller otherwise.
+func (s *Store) Add(server Server) (Server, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	servers, err := s.readAll()
 	if err != nil {
-		return err
+		return Server{}, err
 	}
 
 	if server.ID == "" {
 		server.ID = uuid.NewString()
 	}
 	servers = append(servers, server)
-	return s.writeAll(servers)
+	if err := s.writeAll(servers); err != nil {
+		return Server{}, err
+	}
+	return server, nil
 }
 
 // Update replaces the server with the same ID, preserving its position.

@@ -3,6 +3,23 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.6.4 — Subscription groups, info-node filtering, and a real ID bug fix
+
+- **Fixed a real bug**: `profile.Store.Add` assigned a server its ID on
+  an internal copy and never returned it, so both `AddProfileFromLink`
+  and the new `AddSubscription` handed the frontend a server with an
+  empty ID. Selecting and connecting to a server added in the current
+  session (before any list refresh) failed with `no server with id ""`.
+  `Store.Add` now returns the stored copy, ID included.
+- **Subscription grouping**: servers imported from one subscription URL
+  are folded into a single collapsible row (closed by default) instead
+  of flooding the list — a subscription can carry hundreds of servers.
+- **Info-node filtering**: some subscription providers mix in fake
+  vless://-style entries whose host is a placeholder like
+  `dontUseThis` and whose name carries plan/expiry/traffic text, just
+  so it shows up as a row in clients that list every node. Those are
+  now recognized and skipped instead of being imported as dead servers.
+
 ## v0.6.3 — Subscription URL support
 
 - The "Add server" field now also accepts a subscription URL

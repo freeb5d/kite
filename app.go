@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/freeb5d/kite/internal/profile"
 	"github.com/freeb5d/kite/internal/system"
 	"github.com/freeb5d/kite/internal/update"
@@ -58,10 +60,7 @@ func (a *App) AddProfileFromLink(link string) (profile.Server, error) {
 	if err != nil {
 		return profile.Server{}, err
 	}
-	if err := a.store.Add(server); err != nil {
-		return profile.Server{}, err
-	}
-	return server, nil
+	return a.store.Add(server)
 }
 
 // AddSubscription fetches a subscription URL (the standard V2RayN/
@@ -100,12 +99,27 @@ func (a *App) AddSubscription(subURL string) ([]profile.Server, error) {
 		return nil, fmt.Errorf("no valid servers found in subscription")
 	}
 
+	// Tag every server from this import with the same group ID so the
+	// frontend can fold a subscription's (sometimes hundreds of) servers
+	// into a single collapsible entry instead of flooding the list.
+	groupID := uuid.NewString()
+	groupName := subURL
+	if u, err := url.Parse(subURL); err == nil && u.Host != "" {
+		groupName = u.Host
+	}
+
 	added := make([]profile.Server, 0, len(parsed))
 	for _, server := range parsed {
-		if err := a.store.Add(server); err != nil {
+		if server.Extra == nil {
+			server.Extra = map[string]string{}
+		}
+		server.Extra["subGroup"] = groupID
+		server.Extra["subGroupName"] = groupName
+		stored, err := a.store.Add(server)
+		if err != nil {
 			continue
 		}
-		added = append(added, server)
+		added = append(added, stored)
 	}
 	if len(added) == 0 {
 		return nil, fmt.Errorf("found %d server(s) but failed to save any", len(parsed))
