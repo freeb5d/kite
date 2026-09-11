@@ -15,6 +15,11 @@
   [Download](#downloads) · [Features](#features) · [Building from source](#building-from-source) · [Architecture](#architecture)
 </div>
 
+<p align="center">
+  <img src=".github/screenshots/light.png" alt="Kite, light mode" width="49%" />
+  <img src=".github/screenshots/dark.png" alt="Kite, dark mode" width="49%" />
+</p>
+
 ---
 
 ## Downloads
