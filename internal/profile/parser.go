@@ -40,6 +40,66 @@ func ParseLink(link string) (Server, error) {
 	}
 }
 
+// IsSubscriptionURL reports whether input looks like a subscription URL
+// (http/https) rather than a single vmess/vless/trojan/ss share link.
+func IsSubscriptionURL(input string) bool {
+	input = strings.TrimSpace(input)
+	return strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://")
+}
+
+// ParseSubscription parses the body of a subscription URL, which is
+// conventionally either:
+//   - a base64-encoded blob that decodes to a newline-separated list of
+//     share links (the near-universal "subscription" format used by
+//     V2RayN/V2RayNG/Shadowrocket/Clash-compatible clients), or
+//   - a plain newline-separated list of share links, uncompressed.
+//
+// Lines that fail to parse are skipped rather than failing the whole
+// subscription, since a subscription commonly mixes supported and
+// unsupported (e.g. ss2022, vmess with unusual fields) entries.
+func ParseSubscription(body string) ([]Server, []error) {
+	content := strings.TrimSpace(body)
+
+	if decoded, ok := tryBase64(content); ok {
+		content = decoded
+	}
+
+	var servers []Server
+	var errs []error
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		server, err := ParseLink(line)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%.40s...: %w", line, err))
+			continue
+		}
+		servers = append(servers, server)
+	}
+
+	if len(servers) == 0 && len(errs) == 0 {
+		errs = append(errs, fmt.Errorf("subscription content was empty"))
+	}
+	return servers, errs
+}
+
+func tryBase64(s string) (string, bool) {
+	// A raw link list already contains "://", which is never valid base64;
+	// treating it as base64 first would otherwise silently misparse it.
+	if strings.Contains(s, "://") {
+		return "", false
+	}
+	compact := strings.Join(strings.Fields(s), "")
+	for _, enc := range []*base64.Encoding{base64.StdEncoding, base64.RawStdEncoding, base64.URLEncoding, base64.RawURLEncoding} {
+		if decoded, err := enc.DecodeString(compact); err == nil {
+			return string(decoded), true
+		}
+	}
+	return "", false
+}
+
 // vmess:// carries a base64-encoded JSON payload, not a standard URI.
 func parseVMess(link string) (Server, error) {
 	raw := strings.TrimPrefix(link, "vmess://")

@@ -6,6 +6,7 @@ import { LANGUAGES, getDir, makeT } from './i18n'
 import {
   ListProfiles,
   AddProfileFromLink,
+  AddSubscription,
   DeleteProfile,
   RenameProfile,
   Connect,
@@ -185,12 +186,19 @@ export default function App() {
   const isBusy = pending || status.state === 'starting'
 
   async function handleAddLink() {
-    if (!link.trim()) return
+    const value = link.trim()
+    if (!value) return
     setError('')
     try {
-      const server = await AddProfileFromLink(link.trim())
-      setServers((prev) => [...prev, server])
-      setSelectedId(server.id)
+      if (/^https?:\/\//i.test(value)) {
+        const added = await AddSubscription(value)
+        setServers((prev) => [...prev, ...added])
+        if (added.length > 0) setSelectedId(added[added.length - 1].id)
+      } else {
+        const server = await AddProfileFromLink(value)
+        setServers((prev) => [...prev, server])
+        setSelectedId(server.id)
+      }
       setLink('')
       setAddOpen(false)
     } catch (err) {

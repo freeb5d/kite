@@ -64,6 +64,55 @@ func (a *App) AddProfileFromLink(link string) (profile.Server, error) {
 	return server, nil
 }
 
+// AddSubscription fetches a subscription URL (the standard V2RayN/
+// V2RayNG/Shadowrocket-style base64 link list most providers publish)
+// and adds every server it can parse out of it. It succeeds as long as
+// at least one server was added, even if some entries in the
+// subscription couldn't be parsed.
+func (a *App) AddSubscription(subURL string) ([]profile.Server, error) {
+	req, err := http.NewRequest(http.MethodGet, subURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("invalid subscription URL: %w", err)
+	}
+	// Some subscription providers gate on a client-looking User-Agent.
+	req.Header.Set("User-Agent", "Kite/1.0 (compatible; v2rayN/6.0)")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetching subscription: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("subscription server returned HTTP %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 5<<20))
+	if err != nil {
+		return nil, fmt.Errorf("reading subscription: %w", err)
+	}
+
+	parsed, errs := profile.ParseSubscription(string(body))
+	if len(parsed) == 0 {
+		if len(errs) > 0 {
+			return nil, fmt.Errorf("no valid servers found in subscription: %w", errs[0])
+		}
+		return nil, fmt.Errorf("no valid servers found in subscription")
+	}
+
+	added := make([]profile.Server, 0, len(parsed))
+	for _, server := range parsed {
+		if err := a.store.Add(server); err != nil {
+			continue
+		}
+		added = append(added, server)
+	}
+	if len(added) == 0 {
+		return nil, fmt.Errorf("found %d server(s) but failed to save any", len(parsed))
+	}
+	return added, nil
+}
+
 func (a *App) DeleteProfile(id string) error {
 	return a.store.Delete(id)
 }

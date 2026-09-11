@@ -12,7 +12,7 @@ const dict = {
   en: {
     searchServers: 'Search servers',
     addServer: 'Add server',
-    addLinkPlaceholder: 'vmess:// vless:// trojan:// ss://',
+    addLinkPlaceholder: 'vmess:// vless:// trojan:// ss:// or subscription URL',
     add: 'Add',
     noServersYet: 'No servers yet — click + to add one from a share link.',
     noMatches: 'No matches.',
@@ -60,7 +60,7 @@ const dict = {
   zh: {
     searchServers: '搜索服务器',
     addServer: '添加服务器',
-    addLinkPlaceholder: 'vmess:// vless:// trojan:// ss://',
+    addLinkPlaceholder: '分享链接或订阅链接 (vmess:// vless:// trojan:// ss://)',
     add: '添加',
     noServersYet: '还没有服务器 — 点击 + 通过分享链接添加。',
     noMatches: '没有匹配项。',
@@ -108,7 +108,7 @@ const dict = {
   fa: {
     searchServers: 'جستجوی سرورها',
     addServer: 'افزودن سرور',
-    addLinkPlaceholder: 'vmess:// vless:// trojan:// ss://',
+    addLinkPlaceholder: 'لینک اشتراک‌گذاری یا آدرس سابسکریپشن',
     add: 'افزودن',
     noServersYet: 'هنوز سروری اضافه نشده — روی + بزنید تا از یک لینک اشتراک‌گذاری اضافه کنید.',
     noMatches: 'موردی یافت نشد.',
@@ -156,7 +156,7 @@ const dict = {
   tr: {
     searchServers: 'Sunucu ara',
     addServer: 'Sunucu ekle',
-    addLinkPlaceholder: 'vmess:// vless:// trojan:// ss://',
+    addLinkPlaceholder: "Paylaşım bağlantısı veya abonelik URL'si",
     add: 'Ekle',
     noServersYet: 'Henüz sunucu yok — bir paylaşım bağlantısından eklemek için + simgesine tıklayın.',
     noMatches: 'Eşleşme yok.',
@@ -204,7 +204,7 @@ const dict = {
   ar: {
     searchServers: 'البحث عن الخوادم',
     addServer: 'إضافة خادم',
-    addLinkPlaceholder: 'vmess:// vless:// trojan:// ss://',
+    addLinkPlaceholder: 'رابط مشاركة أو رابط اشتراك',
     add: 'إضافة',
     noServersYet: 'لا توجد خوادم بعد — انقر على + لإضافة واحد من رابط مشاركة.',
     noMatches: 'لا توجد نتائج مطابقة.',
@@ -252,7 +252,7 @@ const dict = {
   fr: {
     searchServers: 'Rechercher des serveurs',
     addServer: 'Ajouter un serveur',
-    addLinkPlaceholder: 'vmess:// vless:// trojan:// ss://',
+    addLinkPlaceholder: "Lien de partage ou URL d'abonnement",
     add: 'Ajouter',
     noServersYet: "Aucun serveur pour l'instant — cliquez sur + pour en ajouter un depuis un lien de partage.",
     noMatches: 'Aucun résultat.',
@@ -300,7 +300,7 @@ const dict = {
   de: {
     searchServers: 'Server suchen',
     addServer: 'Server hinzufügen',
-    addLinkPlaceholder: 'vmess:// vless:// trojan:// ss://',
+    addLinkPlaceholder: 'Freigabelink oder Abonnement-URL',
     add: 'Hinzufügen',
     noServersYet: 'Noch keine Server — klicke auf +, um einen über einen Freigabelink hinzuzufügen.',
     noMatches: 'Keine Treffer.',

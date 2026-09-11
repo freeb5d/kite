@@ -3,6 +3,30 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.6.3 — Subscription URL support
+
+- The "Add server" field now also accepts a subscription URL
+  (`http://`/`https://`), not just a single share link. Kite fetches it,
+  decodes the standard base64 link-list format used by V2RayN/V2RayNG/
+  Shadowrocket-compatible providers, and imports every server it can
+  parse in one go. Entries that fail to parse are skipped rather than
+  failing the whole import.
+
+## v0.6.2 — Vazirmatn font for Persian
+
+- Persian (فارسی) now renders with the bundled Vazirmatn font instead of
+  the system default.
+
+## v0.6.1 — Keep LTR layout for Persian and Arabic
+
+- Persian and Arabic keep full text translation, but the UI layout no
+  longer flips to right-to-left.
+
+## v0.6.0 — Multi-language UI
+
+- Added a language picker (sidebar, next to About): English (default),
+  中文, فارسی, Türkçe, العربية, Français, Deutsch.
+
 ## v0.5.3 — About panel rework, MIT license
 
 - **About panel**: fuller description, a copyable repo link, and quick
