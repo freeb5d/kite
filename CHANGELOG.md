@@ -28,6 +28,18 @@ All notable changes to Kite are documented here. Versions correspond to
   while connected), and Quit Kite; left-clicking the icon also restores
   the window. Only "Quit Kite" actually exits the app.
 
+## v0.8.2 — Single-instance lock
+
+- **Fixed a real bug**: since closing the window now keeps Kite running
+  in the tray (v0.8.0) instead of quitting, launching the exe again
+  (e.g. double-clicking it) started a *second* process. Both processes
+  then fought over the same native resources -- WinTun, the system
+  proxy registry keys -- producing native errors like "An attempt was
+  made to perform an initialization operation when initialization has
+  already been completed" and two overlapping windows. Added Wails'
+  `SingleInstanceLock`: a second launch now just asks the already-running
+  instance to show its window instead of starting a new process.
+
 ## v0.7.1 — Real traffic stats
 
 - **Traffic stats are wired up for real** — `internal/xray/stats.go`'s

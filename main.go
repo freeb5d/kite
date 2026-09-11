@@ -48,6 +48,20 @@ func main() {
 			wailsruntime.WindowHide(ctx)
 			return true // prevent close, window is just hidden
 		},
+		// Since closing the window keeps Kite running in the tray instead
+		// of quitting, launching the exe again (e.g. double-clicking it,
+		// or a shortcut) would otherwise start a second process -- and
+		// both processes fighting over the same native resources (WinTun,
+		// the system proxy registry keys) is exactly what produced the
+		// "operation ... already completed" native error. A second launch
+		// now just asks the already-running instance to show itself.
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId: "kite-a15e9f0a-9e3b-4a2e-8c7c-3a6b2b3f6a41",
+			OnSecondInstanceLaunch: func(_ options.SecondInstanceData) {
+				wailsruntime.WindowShow(app.ctx)
+				wailsruntime.WindowUnminimise(app.ctx)
+			},
+		},
 	})
 
 	if err != nil {
