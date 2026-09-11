@@ -3,6 +3,20 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.6.8 — Fix tcp+HTTP-header-obfuscation connections
+
+- **Fixed a real bug**: a link with `type=tcp&headerType=http` (TCP
+  transport disguised behind a plaintext HTTP request, so an
+  HTTP-sniffing front end in front of the real server doesn't reject
+  the connection) was being sent as plain, undisguised TCP -- Kite
+  never built a `tcpSettings.header` block at all. The front end saw
+  what looked like garbage and answered with a plain HTTP response
+  instead of proxying through, producing the same
+  `unexpected response version... actually 72` error as the REALITY
+  bug fixed in v0.6.7, but for a different reason. `streamSettings` now
+  builds the HTTP disguise header (method/path/Host/User-Agent) for
+  `network=tcp` links that specify `headerType=http`.
+
 ## v0.6.7 — Fix REALITY connections
 
 - **Fixed a real bug**: a `security=reality` link was being sent to

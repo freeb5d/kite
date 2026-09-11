@@ -264,6 +264,34 @@ func streamSettings(server profile.Server) map[string]interface{} {
 			ws["headers"] = map[string]interface{}{"Host": host}
 		}
 		settings["wsSettings"] = ws
+
+	case "tcp":
+		// headerType=http disguises the raw VLESS/VMess bytes behind a
+		// plaintext HTTP request, so an HTTP-sniffing front (nginx, a CDN)
+		// in front of the real server doesn't reject the connection. Without
+		// sending that disguise header, the client's raw request looks like
+		// garbage to that front end, which answers with a plain HTTP
+		// response instead of proxying through -- the client then fails
+		// decoding it as a VLESS reply ("unexpected response version...
+		// actually 72", 'H' from "HTTP/1.1").
+		if firstNonEmpty(server.Extra["headerType"], server.Extra["header"]) == "http" {
+			host := firstNonEmpty(server.Extra["host"], server.Address)
+			settings["tcpSettings"] = map[string]interface{}{
+				"header": map[string]interface{}{
+					"type": "http",
+					"request": map[string]interface{}{
+						"version": "1.1",
+						"method":  "GET",
+						"path":    []string{firstNonEmpty(server.Extra["path"], "/")},
+						"headers": map[string]interface{}{
+							"Host":       []string{host},
+							"User-Agent": []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+							"Connection": []string{"keep-alive"},
+						},
+					},
+				},
+			}
+		}
 	}
 
 	return settings
