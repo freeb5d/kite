@@ -310,19 +310,16 @@ export default function App() {
     }
   }
 
-  function usageText(usage) {
-    if (!usage) return null
-    const parts = []
-    if (usage.totalBytes > 0) {
-      const usedGB = ((usage.uploadBytes + usage.downloadBytes) / 1e9).toFixed(1)
-      const totalGB = (usage.totalBytes / 1e9).toFixed(1)
-      parts.push(`${usedGB}/${totalGB} GB`)
+  function usageInfo(usage) {
+    if (!usage || (!usage.totalBytes && !usage.expireUnix)) return null
+    const usedGB = (usage.uploadBytes + usage.downloadBytes) / 1e9
+    const totalGB = usage.totalBytes > 0 ? usage.totalBytes / 1e9 : null
+    return {
+      usedGB: usedGB.toFixed(1),
+      totalGB: totalGB !== null ? totalGB.toFixed(1) : null,
+      pct: totalGB ? Math.min(100, (usedGB / totalGB) * 100) : null,
+      expiryDate: usage.expireUnix > 0 ? new Date(usage.expireUnix * 1000) : null,
     }
-    if (usage.expireUnix > 0) {
-      const days = Math.ceil((usage.expireUnix * 1000 - Date.now()) / 86400000)
-      parts.push(days >= 0 ? `${days}d left` : 'expired')
-    }
-    return parts.length > 0 ? parts.join(' · ') : null
   }
 
   const selected = servers.find((s) => s.id === selectedId) || null
@@ -633,14 +630,18 @@ export default function App() {
             {groups.map((g) => {
               const isOpen = searching || expandedGroups.has(g.id)
               const activeInGroup = g.servers.some((s) => s.id === selectedId)
+              const info = usageInfo(g.usage)
               return (
-                <div key={g.id} className="space-y-1">
+                <div
+                  key={g.id}
+                  className={`rounded-lg border overflow-hidden transition-colors ${
+                    activeInGroup ? 'border-[var(--accent)]/50' : 'border-transparent hover:border-[var(--border)]'
+                  }`}
+                >
                   <div
                     onClick={() => toggleGroup(g.id)}
-                    className={`group flex items-center gap-2 rounded-lg px-3 py-2.5 cursor-pointer border transition-colors ${
-                      activeInGroup
-                        ? 'bg-[var(--accent)]/10 border-[var(--accent)]/50'
-                        : 'bg-[var(--bg-panel)] border-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--border)]'
+                    className={`group flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors ${
+                      activeInGroup ? 'bg-[var(--accent)]/10' : 'bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)]'
                     }`}
                   >
                     <Icon
@@ -651,8 +652,7 @@ export default function App() {
                       <div className="text-sm font-medium truncate">{g.name}</div>
                       <div className="text-[11px] text-[var(--text-faint)] truncate mt-0.5">
                         {g.servers.length} servers
-                        {usageText(g.usage) && <> · {usageText(g.usage)}</>}
-                        {!usageText(g.usage) && g.notes.length > 0 && <> · {g.notes.join(' · ')}</>}
+                        {!info && g.notes.length > 0 && <> · {g.notes.join(' · ')}</>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -676,6 +676,30 @@ export default function App() {
                       </button>
                     </div>
                   </div>
+                  {info && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-[var(--bg-elevated)] border-t border-[var(--border)]">
+                      {info.pct !== null ? (
+                        <>
+                          <div className="flex-1 h-1.5 rounded-full bg-[var(--border-strong)] overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${info.pct >= 90 ? 'bg-[var(--danger)]' : 'bg-[var(--accent)]'}`}
+                              style={{ width: `${info.pct}%` }}
+                            />
+                          </div>
+                          <span className="shrink-0 text-[11px] text-[var(--text-dim)] font-medium">
+                            {info.usedGB}/{info.totalGB} GB
+                          </span>
+                        </>
+                      ) : (
+                        <span className="flex-1 text-[11px] text-[var(--text-dim)]">{info.usedGB} GB used</span>
+                      )}
+                      {info.expiryDate && (
+                        <span className="shrink-0 text-[11px] text-[var(--text-faint)]">
+                          {t('expires')} {info.expiryDate.toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {isOpen && (
                     <div className="pl-3 space-y-1 border-l border-[var(--border)] ml-4">
                       {g.servers.map((s) => (
