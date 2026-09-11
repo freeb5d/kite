@@ -8,7 +8,7 @@
 
   [![Release](https://img.shields.io/github/v/release/freeb5d/kite?label=release&color=6366f1)](https://github.com/freeb5d/kite/releases/latest)
   [![Build](https://img.shields.io/github/actions/workflow/status/freeb5d/kite/release.yml?label=build)](https://github.com/freeb5d/kite/actions/workflows/release.yml)
-  [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-6366f1)](#downloads)
+  [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-6366f1)](#downloads)
   [![Go Report Card](https://goreportcard.com/badge/github.com/freeb5d/kite)](https://goreportcard.com/report/github.com/freeb5d/kite)
   [![License: MIT](https://img.shields.io/badge/license-MIT-6366f1)](LICENSE)
 
@@ -30,10 +30,13 @@ Grab the latest build from the **[Releases page](https://github.com/freeb5d/kite
 | --- | --- |
 | Windows (x64) | `kite-windows-amd64.exe` |
 | Linux (x64) | `kite-linux-amd64` |
-| macOS | not currently built (see [Known gaps](#known-gaps--next-steps)) |
+| macOS (Apple Silicon) | `kite-macos-arm64` |
 
-Kite ships as a single portable executable — no installer, no admin rights required.
-Once installed, it checks for new releases on startup and can update itself in one click.
+Every platform ships as a single portable executable — no installer, no admin rights
+required (the macOS build is the raw binary pulled out of the `.app` bundle Wails produces;
+see [Known gaps](#known-gaps--next-steps) for the Gatekeeper prompt this means, and how to
+get past it). Once installed, it checks for new releases on startup and can update itself
+in one click.
 
 ## Features
 
@@ -117,11 +120,9 @@ the frontend once `wails dev`/`wails build` generates `frontend/wailsjs/go/main/
 
 ## Known gaps / next steps
 
-- **macOS builds are currently disabled** in CI — the `macos-13` GitHub runner pool had
-  very long queue times when this was set up. Re-enabling it just means restoring the
-  matrix entry in `.github/workflows/release.yml` (see git history on that file for the
-  exact config, including a `webkit2_41`-style workaround needed for a newer-toolchain
-  bindings-generator crash on `macos-latest`).
+- **macOS is Apple Silicon (arm64) only** — no Intel build. If that's needed, add a
+  `darwin/amd64` matrix entry in `.github/workflows/release.yml` alongside the
+  `darwin/arm64` one.
 - **Traffic stats are a stub** — `internal/xray/stats.go`'s `Traffic()` always returns
   zero; it needs to read from the running instance's stats manager instead.
 - **TUN mode is Windows-only** and IPv4-only for now — the exception route that keeps
@@ -134,7 +135,9 @@ the frontend once `wails dev`/`wails build` generates `frontend/wailsjs/go/main/
   need their own backend in `internal/system/proxy_linux.go`.
 - **No automated tests yet.**
 - **No code-signing** — Windows SmartScreen and macOS Gatekeeper will both warn on an
-  unsigned binary; this is expected for now.
+  unsigned binary; this is expected for now. On macOS, running the downloaded binary the
+  first time needs `xattr -d com.apple.quarantine kite-macos-arm64` (or right-click →
+  Open) to get past Gatekeeper, since it isn't notarized.
 
 ## Contributing
 

@@ -3,6 +3,19 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.6.9 — macOS builds are back
+
+- Re-enabled macOS in the release matrix, on `macos-14` (Apple Silicon)
+  instead of the old `macos-13` (Intel), which had very long GitHub
+  runner queue times. Ships as `kite-macos-arm64` — the raw binary
+  pulled out of the `.app` bundle Wails produces, unsigned and
+  unnotarized, so the first run needs
+  `xattr -d com.apple.quarantine kite-macos-arm64` or right-click →
+  Open to get past Gatekeeper.
+- Self-update now recognizes `darwin` and looks for the
+  `kite-macos-arm64` release asset (previously only Windows/Linux were
+  wired up, so self-update silently had nothing to offer on macOS).
+
 ## v0.6.8 — Fix tcp+HTTP-header-obfuscation connections
 
 - **Fixed a real bug**: a link with `type=tcp&headerType=http` (TCP

@@ -19,14 +19,17 @@ jobs:
             platform: windows/amd64
             artifact: kite-windows-amd64.exe
             binpath: build/bin/kite.exe
-          # macOS is temporarily disabled: macos-13 runners have very long
-          # (10+ min) GitHub queue times right now. Re-add once that clears,
-          # or switch to macos-14/15 + retest the LC_UUID bindings-generator
-          # workaround (see git history on this file).
           - os: ubuntu-latest
             platform: linux/amd64
             artifact: kite-linux-amd64
             binpath: build/bin/kite
+          # macos-14 (Apple Silicon) instead of macos-13: much shorter
+          # GitHub queue times, and Apple Silicon is what most current Mac
+          # users actually have.
+          - os: macos-14
+            platform: darwin/arm64
+            artifact: kite-macos-arm64
+            binpath: build/bin/kite.app/Contents/MacOS/kite
 
     runs-on: ${{ matrix.os }}
 
@@ -73,6 +76,10 @@ jobs:
 
       - name: Build (Windows)
         if: matrix.os == 'windows-latest'
+        run: wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=${{ steps.version.outputs.value }}" -clean
+
+      - name: Build (macOS)
+        if: matrix.os == 'macos-14'
         run: wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=${{ steps.version.outputs.value }}" -clean
 
       - name: Rename binary

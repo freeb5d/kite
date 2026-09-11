@@ -96,6 +96,8 @@ func assetNameForPlatform() string {
 		return "kite-windows-amd64.exe"
 	case "linux":
 		return "kite-linux-amd64"
+	case "darwin":
+		return "kite-macos-arm64"
 	default:
 		return ""
 	}
