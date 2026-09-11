@@ -5,10 +5,11 @@ All notable changes to Kite are documented here. Versions correspond to
 
 ## Unreleased
 
-- **Fixed right-click paste**: Wails hides the WebView2 native context
-  menu by default on Windows, so right-click did nothing anywhere in
-  the app -- including pasting a link into the Add Server field.
-  Re-enabled via `windows.Options{EnableDefaultContextMenu: true}`.
+- **Fixed right-click paste**: Wails disables the browser's native
+  right-click context menu in production builds by default, so
+  right-click did nothing anywhere in the app -- including pasting a
+  link into the Add Server field. Re-enabled via
+  `options.App.EnableDefaultContextMenu: true`.
 - **Persian text now always uses Vazirmatn**, not just when Persian is
   the active app language -- e.g. "فارسی" as a label inside the
   language picker while some other language is selected now renders
@@ -21,6 +22,11 @@ All notable changes to Kite are documented here. Versions correspond to
   Needs administrator privileges, same as TUN mode. The block rules are
   only removed on a deliberate Disconnect (or app quit) -- not if xray
   crashes while connected, which is the point of a kill switch.
+- **System tray**: closing the window now hides it to the tray instead
+  of quitting, so an active connection (and kill switch, if on) keeps
+  running. The tray icon's menu has Show Kite, Disconnect (shown only
+  while connected), and Quit Kite; left-clicking the icon also restores
+  the window. Only "Quit Kite" actually exits the app.
 
 ## v0.7.1 — Real traffic stats
 

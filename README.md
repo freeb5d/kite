@@ -47,6 +47,7 @@ in one click.
 - **System proxy integration** — Connect/Disconnect toggles the OS HTTP proxy automatically (per-user registry on Windows, no elevation needed)
 - **TUN mode (Windows)** — routes all system traffic through a virtual network adapter (WinTun, bundled), instead of just apps that honor a proxy setting. Needs administrator privileges; Kite can relaunch itself elevated with one click
 - **Kill switch (Windows)** — blocks all outbound traffic except Kite's own while connected, via a Windows Firewall rule pair, so an app that ignores the system proxy (or a crashed xray process) can't leak traffic outside the tunnel. Same admin requirement as TUN mode
+- **System tray** — closing the window hides it to the tray instead of quitting, so an active connection keeps running; the tray menu has Show Kite, Disconnect, and Quit Kite
 - **Built-in diagnostics** — a Test button makes a real request through the tunnel and reports the actual result; a log viewer surfaces xray-core's own debug log inline; a "Show more" panel expands to live upload/download speed and session totals, read from xray-core's own stats manager
 - **Self-updating** — checks GitHub Releases on launch, one click downloads, swaps, and relaunches (About panel shows both Kite's and the embedded xray-core's version)
 - **Dark / light themes**, with a searchable server list, inline rename, and one-click remove
@@ -136,6 +137,9 @@ the frontend once `wails dev`/`wails build` generates `frontend/wailsjs/go/main/
   (`internal/system/killswitch_windows.go`); Linux/macOS need their own backend
   (`iptables`/`pfctl`) and are unimplemented for now (the toggle is hidden there,
   same as TUN mode).
+- **The native minimize button still just minimizes to the taskbar** — Wails v2 doesn't
+  expose a hook for the OS-level minimize event, only window close (`OnBeforeClose`,
+  which the tray feature uses). Only closing the window hides it to the tray.
 - **No automated tests yet.**
 - **No code-signing** — Windows SmartScreen and macOS Gatekeeper will both warn on an
   unsigned binary; this is expected for now. On macOS, running the downloaded binary the

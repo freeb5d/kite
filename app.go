@@ -16,6 +16,7 @@ import (
 
 	"github.com/freeb5d/kite/internal/profile"
 	"github.com/freeb5d/kite/internal/system"
+	"github.com/freeb5d/kite/internal/tray"
 	"github.com/freeb5d/kite/internal/update"
 	"github.com/freeb5d/kite/internal/xray"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -29,6 +30,10 @@ type App struct {
 	store        *profile.Store
 	updateInfo   update.Info
 	killSwitchOn bool
+	// quitting distinguishes a real quit (from the tray's "Quit Kite")
+	// from the window's own close button, which main.go's OnBeforeClose
+	// intercepts to hide to the tray instead -- see main.go.
+	quitting bool
 }
 
 func NewApp() *App {
@@ -40,6 +45,20 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.store = profile.NewStore()
 	a.manager = xray.NewManager()
+
+	go tray.Start(trayIconPNG,
+		func() { // Show Kite
+			wailsruntime.WindowShow(a.ctx)
+			wailsruntime.WindowUnminimise(a.ctx)
+		},
+		func() { // Disconnect
+			_ = a.Disconnect()
+		},
+		func() { // Quit Kite
+			a.quitting = true
+			wailsruntime.Quit(a.ctx)
+		},
+	)
 }
 
 // shutdown runs when the app is closing; make sure xray is stopped and the
@@ -272,6 +291,7 @@ func (a *App) Connect(serverID string, mode string, killSwitch bool) error {
 		}
 	}
 	a.killSwitchOn = killSwitch
+	tray.SetConnected(true)
 	return nil
 }
 
@@ -281,6 +301,7 @@ func (a *App) Disconnect() error {
 		_ = system.DisableKillSwitch()
 		a.killSwitchOn = false
 	}
+	tray.SetConnected(false)
 	return a.manager.Stop()
 }
 
