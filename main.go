@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"embed"
+	"os"
+	"slices"
+	"time"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -16,7 +19,22 @@ var assets embed.FS
 //go:embed build/appicon.png
 var trayIconPNG []byte
 
+// relaunchWaitFlag is passed to a deliberately-relaunched process
+// (elevation restart, self-update) by internal/system.RelaunchElevated
+// and internal/update.Apply. Spawning a new process is near-instant,
+// but the old one quitting -- and releasing the SingleInstanceLock's IPC
+// listener below -- isn't quite as instant, so without a beat to let
+// that finish, the new process's own lock registration could run first,
+// see the (about to die) old one as "already running", and defer to it
+// instead of actually starting: the old process then exits anyway,
+// leaving nothing running at all.
+const relaunchWaitFlag = "--kite-relaunch-wait"
+
 func main() {
+	if slices.Contains(os.Args[1:], relaunchWaitFlag) {
+		time.Sleep(1500 * time.Millisecond)
+	}
+
 	app := NewApp()
 
 	err := wails.Run(&options.App{

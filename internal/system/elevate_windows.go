@@ -40,9 +40,16 @@ func RelaunchElevated() error {
 	verb, _ := syscall.UTF16PtrFromString("runas")
 	file, _ := syscall.UTF16PtrFromString(exePath)
 	dir, _ := syscall.UTF16PtrFromString(cwd)
+	// Must match main.go's relaunchWaitFlag: spawning a new process here
+	// is near-instant, but this (old) process quitting isn't quite as
+	// instant, so the new process needs to know to wait a beat before
+	// registering itself -- otherwise it can see the (about to die) old
+	// one as "already running" via the SingleInstanceLock and defer to
+	// it instead of actually starting, leaving nothing running at all.
+	params, _ := syscall.UTF16PtrFromString("--kite-relaunch-wait")
 
 	const swNormal = 1
-	ret, _, _ := shellExecute.Call(0, uintptr(unsafe.Pointer(verb)), uintptr(unsafe.Pointer(file)), 0, uintptr(unsafe.Pointer(dir)), swNormal)
+	ret, _, _ := shellExecute.Call(0, uintptr(unsafe.Pointer(verb)), uintptr(unsafe.Pointer(file)), uintptr(unsafe.Pointer(params)), uintptr(unsafe.Pointer(dir)), swNormal)
 	// ShellExecute returns a value > 32 on success; anything else
 	// (including the user cancelling the UAC prompt) is <= 32.
 	if ret <= 32 {

@@ -3,6 +3,21 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.8.4 — Fix Restart as admin not reopening Kite at all
+
+- **Fixed a real bug**: v0.8.3 fixed the *old* process exiting the wrong
+  way, but the race was still there from the other side -- spawning the
+  new (elevated, or updated) process is near-instant, while the old one
+  quitting isn't *quite* as instant. The new process's own
+  `SingleInstanceLock` registration could still run first, see the
+  (about to die) old process as "already running", and defer to it
+  instead of actually starting -- then the old process finished quitting
+  anyway, leaving nothing running at all: click "Restart as admin", UAC
+  prompt, accept, and no Kite window ever comes back.
+  `RelaunchElevated`/`update.Apply` now pass a `--kite-relaunch-wait`
+  flag; the new process waits 1.5s before registering itself, giving
+  the old one time to actually finish quitting first.
+
 ## v0.8.3 — Fix duplicate windows from Restart as admin / self-update
 
 Two real bugs, both around the same root cause:

@@ -186,7 +186,13 @@ func Apply(info Info, onProgress func(Progress)) error {
 		return fmt.Errorf("install new executable: %w", err)
 	}
 
-	cmd := exec.Command(exePath)
+	// --kite-relaunch-wait must match main.go's relaunchWaitFlag: this
+	// process is about to quit but isn't instant about it, and the new
+	// process starting is -- without knowing to wait a beat before
+	// registering itself, it could see the (about to die) old one as
+	// "already running" via SingleInstanceLock and defer to it instead
+	// of actually starting, leaving nothing running at all.
+	cmd := exec.Command(exePath, "--kite-relaunch-wait")
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Start(); err != nil {
 		// Roll back so the user isn't left with nothing runnable.
