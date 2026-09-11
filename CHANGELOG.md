@@ -3,6 +3,25 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.6.7 — Fix REALITY connections
+
+- **Fixed a real bug**: a `security=reality` link was being sent to
+  xray-core as plain `security: "tls"`. Since REALITY isn't TLS -- it
+  proxies unauthenticated clients straight through to the real
+  (camouflaged) destination it's impersonating -- the client ended up
+  doing an ordinary TLS handshake against that real site and got back
+  a plain HTTP response instead of VLESS, failing every connection
+  with `unexpected response version... actually 72` (`H` from
+  `HTTP/1.1`). `streamSettings` now builds a proper `realitySettings`
+  block (publicKey/shortId/spiderX/fingerprint/serverName) for
+  `security=reality` links instead of collapsing it into `tls`.
+
+## v0.6.6 — Usage progress bar for subscriptions
+
+- The subscription group card now shows a usage strip below the
+  header: a filled progress bar for traffic used vs. total, and the
+  plan's expiry date, instead of squeezed text on one line.
+
 ## v0.6.5 — Subscription usage info and a sync button
 
 - The subscription group row now shows plan info when the provider

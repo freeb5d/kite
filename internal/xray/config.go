@@ -209,7 +209,8 @@ func streamSettings(server profile.Server) map[string]interface{} {
 	settings := map[string]interface{}{"network": network}
 
 	security := firstNonEmpty(server.Extra["security"], server.Extra["tls"])
-	if security == "tls" || security == "reality" {
+	switch security {
+	case "tls":
 		settings["security"] = "tls"
 		tlsSettings := map[string]interface{}{"allowInsecure": false}
 		if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"]); sni != "" {
@@ -228,6 +229,32 @@ func streamSettings(server profile.Server) map[string]interface{} {
 			tlsSettings["fingerprint"] = fp
 		}
 		settings["tlsSettings"] = tlsSettings
+
+	case "reality":
+		// REALITY is its own security type, not TLS -- sending it as "tls"
+		// makes the client do a normal TLS handshake against the real
+		// (camouflaged) destination REALITY proxies unauthenticated
+		// connections to, which then answers with a plain HTTP response
+		// instead of VLESS: exactly the "unexpected response version...
+		// actually 72" ('H' from "HTTP/1.1") error this was producing.
+		settings["security"] = "reality"
+		realitySettings := map[string]interface{}{"show": false}
+		if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"]); sni != "" {
+			realitySettings["serverName"] = sni
+		}
+		if fp := server.Extra["fp"]; fp != "" {
+			realitySettings["fingerprint"] = fp
+		}
+		if pbk := server.Extra["pbk"]; pbk != "" {
+			realitySettings["publicKey"] = pbk
+		}
+		if sid := server.Extra["sid"]; sid != "" {
+			realitySettings["shortId"] = sid
+		}
+		if spx := server.Extra["spx"]; spx != "" {
+			realitySettings["spiderX"] = spx
+		}
+		settings["realitySettings"] = realitySettings
 	}
 
 	switch network {
