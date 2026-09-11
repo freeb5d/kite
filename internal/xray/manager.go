@@ -11,8 +11,8 @@ import (
 
 	"github.com/freeb5d/kite/internal/profile"
 	"github.com/freeb5d/kite/internal/system"
-	"github.com/xtls/xray-core/app/stats"
 	"github.com/xtls/xray-core/core"
+	"github.com/xtls/xray-core/features/stats"
 
 	// Registers every protocol/transport xray-core ships (vmess, vless,
 	// trojan, shadowsocks, http/socks/tun inbounds, ws/tls, ...) with the
