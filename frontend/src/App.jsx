@@ -7,6 +7,8 @@ import {
   ListProfiles,
   AddProfileFromLink,
   AddSubscription,
+  RefreshSubscription,
+  DeleteSubscriptionGroup,
   DeleteProfile,
   RenameProfile,
   Connect,
@@ -251,7 +253,19 @@ export default function App() {
         continue
       }
       if (!groupMap.has(groupId)) {
-        groupMap.set(groupId, { id: groupId, name: s.extra?.subGroupName || 'Subscription', servers: [] })
+        let notes = []
+        try {
+          notes = s.extra?.subNotes ? JSON.parse(s.extra.subNotes) : []
+        } catch {
+          notes = []
+        }
+        let usage = null
+        try {
+          usage = s.extra?.subUsage ? JSON.parse(s.extra.subUsage) : null
+        } catch {
+          usage = null
+        }
+        groupMap.set(groupId, { id: groupId, name: s.extra?.subGroupName || 'Subscription', servers: [], notes, usage })
       }
       groupMap.get(groupId).servers.push(s)
     }
@@ -259,6 +273,7 @@ export default function App() {
   }, [filtered])
 
   const [expandedGroups, setExpandedGroups] = useState(() => new Set())
+  const [refreshingGroup, setRefreshingGroup] = useState(null)
   const searching = query.trim().length > 0
   function toggleGroup(id) {
     setExpandedGroups((prev) => {
@@ -267,6 +282,47 @@ export default function App() {
       else next.add(id)
       return next
     })
+  }
+
+  async function handleSyncGroup(groupId, e) {
+    e.stopPropagation()
+    setRefreshingGroup(groupId)
+    setError('')
+    try {
+      const fresh = await RefreshSubscription(groupId)
+      setServers((prev) => [...prev.filter((s) => s.extra?.subGroup !== groupId), ...fresh])
+    } catch (err) {
+      setError(errorText(err))
+    } finally {
+      setRefreshingGroup(null)
+    }
+  }
+
+  async function handleDeleteGroup(groupId, e) {
+    e.stopPropagation()
+    setError('')
+    try {
+      await DeleteSubscriptionGroup(groupId)
+      setServers((prev) => prev.filter((s) => s.extra?.subGroup !== groupId))
+      if (selected?.extra?.subGroup === groupId) setSelectedId(null)
+    } catch (err) {
+      setError(errorText(err))
+    }
+  }
+
+  function usageText(usage) {
+    if (!usage) return null
+    const parts = []
+    if (usage.totalBytes > 0) {
+      const usedGB = ((usage.uploadBytes + usage.downloadBytes) / 1e9).toFixed(1)
+      const totalGB = (usage.totalBytes / 1e9).toFixed(1)
+      parts.push(`${usedGB}/${totalGB} GB`)
+    }
+    if (usage.expireUnix > 0) {
+      const days = Math.ceil((usage.expireUnix * 1000 - Date.now()) / 86400000)
+      parts.push(days >= 0 ? `${days}d left` : 'expired')
+    }
+    return parts.length > 0 ? parts.join(' · ') : null
   }
 
   const selected = servers.find((s) => s.id === selectedId) || null
@@ -581,7 +637,7 @@ export default function App() {
                 <div key={g.id} className="space-y-1">
                   <div
                     onClick={() => toggleGroup(g.id)}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2.5 cursor-pointer border transition-colors ${
+                    className={`group flex items-center gap-2 rounded-lg px-3 py-2.5 cursor-pointer border transition-colors ${
                       activeInGroup
                         ? 'bg-[var(--accent)]/10 border-[var(--accent)]/50'
                         : 'bg-[var(--bg-panel)] border-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--border)]'
@@ -593,7 +649,31 @@ export default function App() {
                     />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium truncate">{g.name}</div>
-                      <div className="text-[11px] text-[var(--text-faint)] truncate mt-0.5">{g.servers.length} servers</div>
+                      <div className="text-[11px] text-[var(--text-faint)] truncate mt-0.5">
+                        {g.servers.length} servers
+                        {usageText(g.usage) && <> · {usageText(g.usage)}</>}
+                        {!usageText(g.usage) && g.notes.length > 0 && <> · {g.notes.join(' · ')}</>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
+                        onClick={(e) => handleSyncGroup(g.id, e)}
+                        disabled={refreshingGroup === g.id}
+                        title={t('syncSubscription')}
+                      >
+                        <Icon
+                          path="M4 4v5h5M20 20v-5h-5M4.6 15a8 8 0 0 0 14.8 2.5M19.4 9A8 8 0 0 0 4.6 6.5"
+                          className={`w-3.5 h-3.5 ${refreshingGroup === g.id ? 'animate-spin' : ''}`}
+                        />
+                      </button>
+                      <button
+                        className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] flex items-center justify-center"
+                        onClick={(e) => handleDeleteGroup(g.id, e)}
+                        title={t('remove')}
+                      >
+                        <Icon path={icons.trash} className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                   {isOpen && (

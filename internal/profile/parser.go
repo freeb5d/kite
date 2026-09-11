@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -62,7 +63,7 @@ func IsSubscriptionURL(input string) bool {
 // "dontUseThis" -- just to surface plan/expiry/traffic details inside
 // clients that list every node. Those are recognized by isInfoNode and
 // dropped rather than imported as dead servers.
-func ParseSubscription(body string) ([]Server, []error) {
+func ParseSubscription(body string) ([]Server, []string, []error) {
 	content := strings.TrimSpace(body)
 
 	if decoded, ok := tryBase64(content); ok {
@@ -70,6 +71,7 @@ func ParseSubscription(body string) ([]Server, []error) {
 	}
 
 	var servers []Server
+	var notes []string
 	var errs []error
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)
@@ -82,6 +84,9 @@ func ParseSubscription(body string) ([]Server, []error) {
 			continue
 		}
 		if isInfoNode(server) {
+			if server.Name != "" {
+				notes = append(notes, server.Name)
+			}
 			continue
 		}
 		servers = append(servers, server)
@@ -90,7 +95,7 @@ func ParseSubscription(body string) ([]Server, []error) {
 	if len(servers) == 0 && len(errs) == 0 {
 		errs = append(errs, fmt.Errorf("subscription content was empty"))
 	}
-	return servers, errs
+	return servers, notes, errs
 }
 
 // isInfoNode reports whether a parsed entry looks like one of the fake
@@ -119,6 +124,47 @@ func isInfoNode(s Server) bool {
 		}
 	}
 	return false
+}
+
+// SubscriptionUsage is traffic/expiry info a subscription provider can
+// report via the (informal but widely adopted) "Subscription-Userinfo"
+// response header, e.g.:
+//
+//	Subscription-Userinfo: upload=123; download=456; total=10737418240; expire=1780000000
+type SubscriptionUsage struct {
+	UploadBytes   int64 `json:"uploadBytes"`
+	DownloadBytes int64 `json:"downloadBytes"`
+	TotalBytes    int64 `json:"totalBytes"`
+	ExpireUnix    int64 `json:"expireUnix"` // 0 if not reported
+}
+
+// ParseSubscriptionUserinfo parses a Subscription-Userinfo header value.
+// Returns false if the header was empty or carried none of the known
+// fields.
+func ParseSubscriptionUserinfo(header string) (SubscriptionUsage, bool) {
+	var usage SubscriptionUsage
+	found := false
+	for _, part := range strings.Split(header, ";") {
+		kv := strings.SplitN(strings.TrimSpace(part), "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		n, err := strconv.ParseInt(strings.TrimSpace(kv[1]), 10, 64)
+		if err != nil {
+			continue
+		}
+		switch strings.ToLower(strings.TrimSpace(kv[0])) {
+		case "upload":
+			usage.UploadBytes, found = n, true
+		case "download":
+			usage.DownloadBytes, found = n, true
+		case "total":
+			usage.TotalBytes, found = n, true
+		case "expire":
+			usage.ExpireUnix, found = n, true
+		}
+	}
+	return usage, found
 }
 
 func tryBase64(s string) (string, bool) {

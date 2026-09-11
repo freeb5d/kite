@@ -3,6 +3,16 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.6.5 — Subscription usage info and a sync button
+
+- The subscription group row now shows plan info when the provider
+  reports it: traffic used/total and days left, parsed from the
+  `Subscription-Userinfo` response header when present, falling back to
+  the human-readable "info" line(s) some providers mix into the link
+  list itself (previously discarded outright).
+- Added a **sync button** on the subscription group (next to remove) to
+  re-fetch that subscription and refresh its server list in place.
+
 ## v0.6.4 — Subscription groups, info-node filtering, and a real ID bug fix
 
 - **Fixed a real bug**: `profile.Store.Add` assigned a server its ID on

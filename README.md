@@ -33,7 +33,7 @@ Once installed, it checks for new releases on startup and can update itself in o
 ## Features
 
 - **Link formats**: `vmess://`, `vless://`, `trojan://`, `ss://` — paste a share link and it's parsed and saved
-- **Subscription URLs** — paste an `http(s)://` subscription link (the base64 link-list format used by V2RayN/V2RayNG/Shadowrocket) and every server it contains is imported at once, folded into one collapsible group in the list (subscriptions can carry hundreds of servers); fake "info" entries some providers mix in (expiry/traffic placeholders) are filtered out automatically
+- **Subscription URLs** — paste an `http(s)://` subscription link (the base64 link-list format used by V2RayN/V2RayNG/Shadowrocket) and every server it contains is imported at once, folded into one collapsible group in the list (subscriptions can carry hundreds of servers). The group shows plan/traffic/expiry info when the provider reports it (via the `Subscription-Userinfo` header, or the fake "info" entries some providers mix into the link list), and has its own sync button to re-fetch and refresh its servers
 - **Real xray-core**, embedded as a Go library (not a shelled-out binary) — full lifecycle control, no parsing stdout for stats
 - **Transports**: TCP and WebSocket, with TLS/REALITY security detection straight from the link
 - **System proxy integration** — Connect/Disconnect toggles the OS HTTP proxy automatically (per-user registry on Windows, no elevation needed)

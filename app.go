@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -69,6 +70,53 @@ func (a *App) AddProfileFromLink(link string) (profile.Server, error) {
 // at least one server was added, even if some entries in the
 // subscription couldn't be parsed.
 func (a *App) AddSubscription(subURL string) ([]profile.Server, error) {
+	return a.importSubscription(subURL, uuid.NewString())
+}
+
+// RefreshSubscription re-fetches the subscription that a given server
+// group was originally imported from, replacing that group's servers
+// with the freshly parsed list (same group ID, so the UI's expand/
+// collapse state and position don't reset).
+func (a *App) RefreshSubscription(groupID string) ([]profile.Server, error) {
+	all, err := a.store.List()
+	if err != nil {
+		return nil, err
+	}
+	var subURL string
+	for _, s := range all {
+		if s.Extra["subGroup"] == groupID {
+			subURL = s.Extra["subURL"]
+			break
+		}
+	}
+	if subURL == "" {
+		return nil, fmt.Errorf("subscription group not found")
+	}
+
+	if err := a.DeleteSubscriptionGroup(groupID); err != nil {
+		return nil, err
+	}
+	return a.importSubscription(subURL, groupID)
+}
+
+// DeleteSubscriptionGroup removes every server that was imported from
+// the same subscription (same extra.subGroup id).
+func (a *App) DeleteSubscriptionGroup(groupID string) error {
+	all, err := a.store.List()
+	if err != nil {
+		return err
+	}
+	for _, s := range all {
+		if s.Extra["subGroup"] == groupID {
+			if err := a.store.Delete(s.ID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (a *App) importSubscription(subURL, groupID string) ([]profile.Server, error) {
 	req, err := http.NewRequest(http.MethodGet, subURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("invalid subscription URL: %w", err)
@@ -91,7 +139,7 @@ func (a *App) AddSubscription(subURL string) ([]profile.Server, error) {
 		return nil, fmt.Errorf("reading subscription: %w", err)
 	}
 
-	parsed, errs := profile.ParseSubscription(string(body))
+	parsed, notes, errs := profile.ParseSubscription(string(body))
 	if len(parsed) == 0 {
 		if len(errs) > 0 {
 			return nil, fmt.Errorf("no valid servers found in subscription: %w", errs[0])
@@ -99,13 +147,28 @@ func (a *App) AddSubscription(subURL string) ([]profile.Server, error) {
 		return nil, fmt.Errorf("no valid servers found in subscription")
 	}
 
-	// Tag every server from this import with the same group ID so the
-	// frontend can fold a subscription's (sometimes hundreds of) servers
-	// into a single collapsible entry instead of flooding the list.
-	groupID := uuid.NewString()
 	groupName := subURL
 	if u, err := url.Parse(subURL); err == nil && u.Host != "" {
 		groupName = u.Host
+	}
+
+	// Usage/expiry, when the provider reports it via the informal but
+	// widely-adopted Subscription-Userinfo response header, plus any
+	// human-readable "info" lines mixed into the link list itself
+	// (see profile.isInfoNode) -- both get attached to every server in
+	// the group so the UI can show plan/expiry/traffic without a
+	// separate subscriptions store.
+	var subMeta string
+	if usage, ok := profile.ParseSubscriptionUserinfo(resp.Header.Get("Subscription-Userinfo")); ok {
+		if b, err := json.Marshal(usage); err == nil {
+			subMeta = string(b)
+		}
+	}
+	var subNotes string
+	if len(notes) > 0 {
+		if b, err := json.Marshal(notes); err == nil {
+			subNotes = string(b)
+		}
 	}
 
 	added := make([]profile.Server, 0, len(parsed))
@@ -115,6 +178,13 @@ func (a *App) AddSubscription(subURL string) ([]profile.Server, error) {
 		}
 		server.Extra["subGroup"] = groupID
 		server.Extra["subGroupName"] = groupName
+		server.Extra["subURL"] = subURL
+		if subMeta != "" {
+			server.Extra["subUsage"] = subMeta
+		}
+		if subNotes != "" {
+			server.Extra["subNotes"] = subNotes
+		}
 		stored, err := a.store.Add(server)
 		if err != nil {
 			continue
