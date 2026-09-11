@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/freeb5d/kite/internal/profile"
 	"github.com/freeb5d/kite/internal/system"
@@ -152,10 +153,22 @@ func (m *Manager) Stop() error {
 		return nil
 	}
 
+	wasTUN := m.status.Mode == ModeTUN
 	err := m.instance.Close()
 	m.instance = nil
 	m.uplinkCounter, m.downlinkCounter = nil, nil
 	m.status = Status{State: StateStopped}
+
+	if wasTUN {
+		// xray-core's TUN inbound doesn't finish tearing down the Wintun
+		// adapter/session synchronously within Close() -- reconnecting
+		// immediately after a TUN disconnect can hit the adapter/session
+		// still being released and fail with a Windows "An attempt was
+		// made to perform an initialization operation when
+		// initialization has already been completed" error. A short
+		// pause here gives it time to actually finish first.
+		time.Sleep(800 * time.Millisecond)
+	}
 	return err
 }
 

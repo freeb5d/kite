@@ -3,6 +3,16 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.8.7 — Fix reconnecting in TUN mode right after disconnecting
+
+- **Fixed a real bug**: xray-core's TUN inbound doesn't finish tearing
+  down the Wintun adapter/session synchronously within `Close()` --
+  reconnecting in TUN mode immediately after disconnecting could hit
+  the adapter/session still being released and fail with "An attempt
+  was made to perform an initialization operation when initialization
+  has already been completed." `Manager.Stop()` now pauses briefly
+  after a TUN-mode disconnect to give it time to actually finish first.
+
 ## v0.8.6 — Fix relaunch still not reopening when connected
 
 - **Fixed a real bug**: v0.8.4's fixed 1.5s wait for the old process to
