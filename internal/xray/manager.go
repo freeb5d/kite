@@ -108,6 +108,16 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 		for _, r := range addedRoutes {
 			_ = system.RemoveExceptionRoute(r)
 		}
+		if mode == ModeTUN && missingTUNDLL() {
+			// Kite writes wintun.dll next to itself right before this
+			// (prepareTUN), so this specific failure almost always means
+			// something deleted it in between -- overwhelmingly antivirus/
+			// Windows Defender quarantining it. Wintun-based apps (Kite,
+			// WireGuard, v2rayN, ...) commonly need an AV exclusion for
+			// their install folder because a kernel-adjacent networking
+			// DLL like this gets flagged heuristically.
+			err = fmt.Errorf("%w -- wintun.dll went missing right after Kite wrote it, most likely quarantined by antivirus/Windows Defender; try adding Kite's folder to your antivirus exclusions", err)
+		}
 		m.status = Status{State: StateError, Message: err.Error()}
 		return err
 	}

@@ -3,6 +3,18 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.8.5 — Clearer error when antivirus deletes wintun.dll
+
+- TUN mode failing with a raw, unhelpful OS error like "The system
+  cannot find the file specified" almost always means antivirus
+  software (Windows Defender included) quarantined `wintun.dll` right
+  after Kite wrote it next to itself -- a kernel-adjacent networking
+  DLL like this commonly gets flagged heuristically, the same issue
+  WireGuard/v2rayN and other Wintun-based apps run into. Kite now
+  detects this specific case and wraps the error with a clear
+  explanation and the fix (add Kite's folder to antivirus exclusions)
+  instead of leaving the user to guess at a generic Windows error.
+
 ## v0.8.4 — Fix Restart as admin not reopening Kite at all
 
 - **Fixed a real bug**: v0.8.3 fixed the *old* process exiting the wrong

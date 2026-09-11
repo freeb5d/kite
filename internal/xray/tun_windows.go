@@ -23,3 +23,16 @@ func prepareTUN() error {
 	}
 	return os.WriteFile(dllPath, wintun.DLL, 0o644)
 }
+
+// missingTUNDLL reports whether wintun.dll is (no longer) present next
+// to the running executable -- used to give a clearer error than
+// whatever generic OS message xray-core's own LoadLibrary call surfaces
+// when it can't find it.
+func missingTUNDLL() bool {
+	exePath, err := os.Executable()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(filepath.Dir(exePath), "wintun.dll"))
+	return os.IsNotExist(err)
+}

@@ -144,7 +144,12 @@ the frontend once `wails dev`/`wails build` generates `frontend/wailsjs/go/main/
 - **No code-signing** — Windows SmartScreen and macOS Gatekeeper will both warn on an
   unsigned binary; this is expected for now. On macOS, running the downloaded binary the
   first time needs `xattr -d com.apple.quarantine kite-macos-arm64` (or right-click →
-  Open) to get past Gatekeeper, since it isn't notarized.
+  Open) to get past Gatekeeper, since it isn't notarized. On Windows, antivirus software
+  (including Defender) sometimes quarantines `wintun.dll` right after Kite writes it next
+  to itself for TUN mode, since a kernel-adjacent networking DLL like this gets flagged
+  heuristically — the same thing WireGuard, v2rayN, and other Wintun-based apps run into.
+  If TUN mode fails with a file-not-found-style error, add Kite's folder to your
+  antivirus's exclusions.
 
 ## Contributing
 
