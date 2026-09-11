@@ -3,6 +3,31 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.5.3 — About panel rework, MIT license
+
+- **About panel**: fuller description, a copyable repo link, and quick
+  Repository / Releases / Report-an-issue shortcuts, instead of a single
+  bare GitHub link.
+- Added an **MIT license** (`LICENSE`) and linked it from the README.
+- Set the GitHub repo's description and topics (`v2ray`, `xray`, `vpn`,
+  `vmess`, `vless`, `trojan`, `shadowsocks`, `wails`, `tun`, …) so the
+  project actually surfaces in GitHub search.
+
+## v0.5.2 — Fix country flag not rendering on Windows
+
+- Windows' emoji font (Segoe UI Emoji) doesn't support regional-indicator
+  flag emoji — it fell back to printing the raw two-letter code (e.g.
+  "FI FI") instead of a flag. The Test result now renders a real flag
+  image instead of relying on emoji support.
+
+## v0.5.1 — Test result shows exit IP, country, and real delay
+
+- The Test button's result used to just say "OK (HTTP 204)" against
+  Cloudflare's `generate_204` endpoint — no proof of *which* server you
+  were actually exiting through. It now hits Cloudflare's trace endpoint
+  and shows the VPN server's real exit IP, its country, and the actual
+  round-trip delay of the request made through the tunnel.
+
 ## v0.5.0 — TUN mode (Windows), update download progress
 
 - **TUN mode**: a Proxy/TUN toggle now appears on Windows. TUN mode routes
@@ -17,6 +42,12 @@ All notable changes to Kite are documented here. Versions correspond to
   Windows-only and IPv4-only for this first pass — see README known gaps.
 - **Update progress**: the self-update banner now shows a live percentage
   and progress bar while downloading, instead of a static "Updating…".
+
+## v0.4.1 — Branding and docs
+
+- Added the Kite app logo/icon throughout the app and README.
+- Rewrote the README (features, architecture, downloads, known gaps) and
+  started this CHANGELOG.
 
 ## v0.4.0 — About panel, self-update, dark/light theme
 
