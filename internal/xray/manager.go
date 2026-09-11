@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -96,16 +97,38 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 		return err
 	}
 
-	instance, err := core.New(pbConfig)
-	if err != nil {
-		for _, r := range addedRoutes {
-			_ = system.RemoveExceptionRoute(r)
-		}
-		m.status = Status{State: StateError, Message: err.Error()}
-		return err
+	// TUN mode specifically gets retried: xray-core's TUN inbound doesn't
+	// finish tearing down the previous Wintun adapter/session
+	// synchronously within Close(), so reconnecting soon after a TUN
+	// disconnect can hit that still-being-released adapter/session and
+	// fail with a Windows "An attempt was made to perform an
+	// initialization operation when initialization has already been
+	// completed" error. A fixed pause after Stop() wasn't reliably long
+	// enough, so retry here instead -- each attempt rebuilds a fresh
+	// core.Instance, since one that failed to Start() isn't safely
+	// reusable.
+	attempts := 1
+	if mode == ModeTUN {
+		attempts = 5
 	}
 
-	if err := instance.Start(); err != nil {
+	var instance *core.Instance
+	for attempt := 1; attempt <= attempts; attempt++ {
+		instance, err = core.New(pbConfig)
+		if err != nil {
+			break
+		}
+		err = instance.Start()
+		if err == nil {
+			break
+		}
+		if attempt < attempts && isAdapterStillReleasing(err) {
+			time.Sleep(time.Duration(attempt) * 700 * time.Millisecond)
+			continue
+		}
+		break
+	}
+	if err != nil {
 		for _, r := range addedRoutes {
 			_ = system.RemoveExceptionRoute(r)
 		}
@@ -118,6 +141,8 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 			// their install folder because a kernel-adjacent networking
 			// DLL like this gets flagged heuristically.
 			err = fmt.Errorf("%w -- wintun.dll went missing right after Kite wrote it, most likely quarantined by antivirus/Windows Defender; try adding Kite's folder to your antivirus exclusions", err)
+		} else if mode == ModeTUN && isAdapterStillReleasing(err) {
+			err = fmt.Errorf("%w -- the previous TUN session didn't finish releasing its network adapter in time; wait a few seconds and try connecting again", err)
 		}
 		m.status = Status{State: StateError, Message: err.Error()}
 		return err
@@ -153,22 +178,13 @@ func (m *Manager) Stop() error {
 		return nil
 	}
 
-	wasTUN := m.status.Mode == ModeTUN
 	err := m.instance.Close()
 	m.instance = nil
 	m.uplinkCounter, m.downlinkCounter = nil, nil
 	m.status = Status{State: StateStopped}
-
-	if wasTUN {
-		// xray-core's TUN inbound doesn't finish tearing down the Wintun
-		// adapter/session synchronously within Close() -- reconnecting
-		// immediately after a TUN disconnect can hit the adapter/session
-		// still being released and fail with a Windows "An attempt was
-		// made to perform an initialization operation when
-		// initialization has already been completed" error. A short
-		// pause here gives it time to actually finish first.
-		time.Sleep(800 * time.Millisecond)
-	}
+	// A subsequent TUN-mode Start() retries through the "adapter still
+	// releasing" window itself (see isAdapterStillReleasing) rather than
+	// this method guessing a fixed wait up front.
 	return err
 }
 
@@ -183,4 +199,11 @@ func (m *Manager) Status() Status {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.status
+}
+
+// isAdapterStillReleasing reports whether err looks like the Windows
+// "already initialized" error a Wintun adapter/session that hasn't
+// finished being released by the previous connection produces.
+func isAdapterStillReleasing(err error) bool {
+	return err != nil && strings.Contains(strings.ToLower(err.Error()), "already been completed")
 }

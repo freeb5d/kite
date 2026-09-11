@@ -3,6 +3,18 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.8.8 — Retry TUN reconnect instead of guessing a fixed wait
+
+- v0.8.7's fixed 800ms pause after a TUN disconnect wasn't reliably
+  long enough -- reconnecting could still hit the previous session's
+  Wintun adapter not finished releasing yet, with the same "already
+  been completed" error. Replaced the guess with a real retry: a
+  TUN-mode `Start()` now retries up to 5 times with increasing backoff
+  specifically on that error, rebuilding a fresh `core.Instance` each
+  attempt, instead of hoping one fixed delay was enough. If it's still
+  failing after every retry, the error now says plainly that the
+  previous session hadn't finished releasing its adapter in time.
+
 ## v0.8.7 — Fix reconnecting in TUN mode right after disconnecting
 
 - **Fixed a real bug**: xray-core's TUN inbound doesn't finish tearing
