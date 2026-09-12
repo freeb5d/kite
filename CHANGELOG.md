@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.10.1 — Russian translation
+
+- Added Русский (Russian) as an 8th UI language, alongside English, 中文, فارسی,
+  Türkçe, العربية, Français, and Deutsch.
+- README's language list and count updated to match.
+
 ## v0.10.0 — Bring back xray-core as a selectable engine (now the default)
 
 The v0.9.0 sing-box migration traded away xray-core's `tcp&headerType=http` transport

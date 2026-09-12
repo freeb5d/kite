@@ -51,7 +51,7 @@ in one click.
 - **Built-in diagnostics** — a Test button makes a real request through the tunnel and reports the actual result; a log viewer surfaces the active engine's own debug log inline
 - **Self-updating** — checks GitHub Releases on launch, one click downloads, swaps, and relaunches (About panel shows Kite's version, the active engine, and its version)
 - **Dark / light themes**, with a searchable server list, inline rename, and one-click remove
-- **7 languages** — English (default), 中文, فارسی, Türkçe, العربية, Français, Deutsch, switchable from the sidebar (Persian uses the bundled Vazirmatn font)
+- **8 languages** — English (default), 中文, فارسی, Türkçe, العربية, Français, Deutsch, Русский, switchable from the sidebar (Persian uses the bundled Vazirmatn font)
 
 ## Building from source
 
