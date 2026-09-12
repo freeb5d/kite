@@ -107,7 +107,12 @@ func buildJSON(server profile.Server, mode Mode) ([]byte, error) {
 			"address":        []string{TUNGateway},
 			"mtu":            1500,
 			"auto_route":     true,
-			"stack":          "gvisor",
+			// "gvisor" needs the with_gvisor Go build tag (an extra
+			// netstack dependency) that release.yml's build step doesn't
+			// pass, so it always fails at runtime with "gVisor is not
+			// included in this build". "system" uses the OS's own TUN
+			// handling instead and needs nothing extra.
+			"stack": "system",
 		})
 	}
 

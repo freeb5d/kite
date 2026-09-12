@@ -3,6 +3,15 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.9.4 — Fix TUN mode failing with "gVisor is not included in this build"
+
+TUN mode couldn't start at all after the sing-box migration: `internal/xray/config.go`
+hardcoded the TUN inbound's `stack` to `gvisor`, but that network stack needs the
+`with_gvisor` Go build tag (an extra netstack dependency `release.yml`'s build step
+doesn't pass), so sing-box refused to start with "gVisor is not included in this
+build, rebuild with -tags with_gvisor". Switched to the `system` stack, which uses
+the OS's own TUN handling and needs no extra build tag.
+
 ## v0.9.3 — Force http/1.1 ALPN for WebSocket transport
 
 WS links whose `alpn` param included `h2` (a common default from subscription
