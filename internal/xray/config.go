@@ -180,7 +180,13 @@ func tlsJSON(server profile.Server) map[string]interface{} {
 	}
 
 	tls := map[string]interface{}{"enabled": true}
-	if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"]); sni != "" {
+	// A link can specify security=tls with no sni/host at all (or host set
+	// to an empty string, as some generators do) -- xray-core silently
+	// defaulted TLS's SNI to the server address in that case, but sing-box
+	// sends no SNI extension at all unless server_name is set, which many
+	// TLS termination points (CDNs especially) reject outright. Match
+	// xray-core's behavior so these links keep working.
+	if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"], server.Address); sni != "" {
 		tls["server_name"] = sni
 	}
 	if alpn := server.Extra["alpn"]; alpn != "" {

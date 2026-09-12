@@ -3,6 +3,16 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.9.2 — Default TLS SNI to the server address
+
+Plain `security=tls` links with no `sni` param (and `host` present but empty, as some
+subscription generators emit) connected past the handshake but were closed by the server
+around ~400ms in, because `internal/xray/config.go` left sing-box's outbound `tls.server_name`
+unset in that case -- sing-box sends no SNI extension at all unless `server_name` is set,
+which most TLS-terminating servers/CDNs reject since they can't route the connection. Under
+xray-core this same link worked because it silently defaulted SNI to the server's own
+address; sing-box now does the same.
+
 ## v0.9.1 — Fix REALITY connections after the sing-box migration
 
 VLESS+REALITY servers failed to connect after v0.9.0 with a `connection download closed:
