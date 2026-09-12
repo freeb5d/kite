@@ -13,6 +13,8 @@
   [![License: MIT](https://img.shields.io/badge/license-MIT-6366f1)](LICENSE)
 
   [Download](#downloads) · [Features](#features) · [Building from source](#building-from-source) · [Architecture](#architecture)
+
+  English · [中文](README.zh.md) · [فارسی](README.fa.md) · [Türkçe](README.tr.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Русский](README.ru.md)
 </div>
 
 <p align="center">
