@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/xtls/xray-core/core"
+	"github.com/xtls/xray-core/features/stats"
 	"github.com/xtls/xray-core/infra/conf/serial"
 
 	// Registers every inbound/outbound/proxy protocol implementation
@@ -47,9 +48,11 @@ type Traffic struct {
 // own tun package even then in practice, so Start refuses ModeTUN outright
 // rather than pretending to support it. See README known gaps.
 type Manager struct {
-	mu       sync.Mutex
-	status   Status
-	instance *core.Instance
+	mu              sync.Mutex
+	status          Status
+	instance        *core.Instance
+	uplinkCounter   stats.Counter
+	downlinkCounter stats.Counter
 }
 
 func NewManager() *Manager {
@@ -96,6 +99,15 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 
 	m.instance = instance
 	m.status = Status{State: StateRunning, Server: server.Name, Mode: mode}
+	m.uplinkCounter, m.downlinkCounter = nil, nil
+	if statsManager, ok := instance.GetFeature(stats.ManagerType()).(stats.Manager); ok && statsManager != nil {
+		if c, err := statsManager.GetOrRegisterCounter("outbound>>>proxy>>>traffic>>>uplink"); err == nil {
+			m.uplinkCounter = c
+		}
+		if c, err := statsManager.GetOrRegisterCounter("outbound>>>proxy>>>traffic>>>downlink"); err == nil {
+			m.downlinkCounter = c
+		}
+	}
 	return nil
 }
 
@@ -110,6 +122,7 @@ func (m *Manager) Stop() error {
 
 	err := m.instance.Close()
 	m.instance = nil
+	m.uplinkCounter, m.downlinkCounter = nil, nil
 	m.status = Status{State: StateStopped}
 	return err
 }
@@ -127,9 +140,21 @@ func (m *Manager) Status() Status {
 	return m.status
 }
 
-// Traffic always reports zero -- xray-core's stats.Manager isn't wired up
-// here, matching sing-box's own stubbed Traffic() (see
-// internal/engine/singbox/stats.go). Follow-up for either engine.
+// Traffic reads the "proxy" outbound's cumulative uplink/downlink byte
+// counters from xray-core's own stats.Manager feature (registered in
+// Start via the policy.system.statsOutboundUplink/Downlink config --
+// see config.go). Zero while disconnected, same as before this was
+// wired up.
 func (m *Manager) Traffic() Traffic {
-	return Traffic{}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var t Traffic
+	if m.uplinkCounter != nil {
+		t.Uplink = m.uplinkCounter.Value()
+	}
+	if m.downlinkCounter != nil {
+		t.Downlink = m.downlinkCounter.Value()
+	}
+	return t
 }

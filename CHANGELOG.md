@@ -3,6 +3,23 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 📊 v0.10.2 — Wire up real traffic stats for xray-core
+
+Live/total traffic in the "Show more" panel has read a stubbed 0B/s ever since the
+v0.9.0 sing-box migration, on both engines. Fixed for the default engine: `config.go`
+now turns on `policy.system.statsOutboundUplink`/`Downlink` and an empty `stats: {}`
+block, which makes xray-core register per-outbound byte counters
+(`outbound>>>proxy>>>traffic>>>uplink`/`downlink`) in its own `stats.Manager`;
+`manager.go` fetches that feature right after `Start()` and `Traffic()` now reads the
+real counters instead of returning a stub.
+
+sing-box's equivalent (`trafficcontrol.Manager`, exposed via `experimental.clash_api`)
+still isn't wired up -- unlike xray-core's stats manager, it isn't reachable through
+`box.Box`'s small set of exported getters, so registering it needs pushing a traffic
+manager into the same internal `context.Context` the box builds its services from
+before calling `box.New`. Left as a stub for now (see README known gaps); switching to
+sing-box (for TUN mode) still means 0B/s in that panel.
+
 ## 🌐 v0.10.1 — Russian translation
 
 - Added Русский (Russian) as an 8th UI language, alongside English, 中文, فارسی,

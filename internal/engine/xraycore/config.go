@@ -89,6 +89,16 @@ func buildJSON(server profile.Server) ([]byte, error) {
 			outbound,
 			{"tag": "direct", "protocol": "freedom"},
 		},
+		// Registers per-outbound traffic counters (stats.Manager) tagged
+		// "outbound>>>proxy>>>traffic>>>uplink"/"downlink" -- see
+		// manager.go's Traffic(), which reads them back.
+		"policy": map[string]interface{}{
+			"system": map[string]interface{}{
+				"statsOutboundUplink":   true,
+				"statsOutboundDownlink": true,
+			},
+		},
+		"stats": map[string]interface{}{},
 	}
 
 	return json.Marshal(config)

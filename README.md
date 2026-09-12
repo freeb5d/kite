@@ -148,10 +148,11 @@ the frontend once `wails dev`/`wails build` generates `frontend/wailsjs/go/main/
 - **TUN mode only works under the sing-box engine** — xray-core (the default) has no
   TUN inbound here; switching to TUN mode while xray-core is selected fails with a
   clear error telling you to switch engines first in the About panel.
-- **Live traffic stats are a stub on both engines** — the "Show more" panel's numbers
-  always read 0B/s. xray-core's stats.Manager and sing-box's `trafficcontrol.Manager`
-  (via `experimental.clash_api`/`v2ray_api`) both need extra wiring that hasn't been
-  done yet — a follow-up for either engine.
+- **Live traffic stats only work under the xray-core engine** — its `stats.Manager` is
+  wired up via `policy.system.statsOutboundUplink`/`Downlink`. sing-box's equivalent
+  (`trafficcontrol.Manager` via `experimental.clash_api`) needs its own service wired
+  into the box's internal context, which hasn't been done yet — the "Show more" panel
+  reads 0B/s while sing-box is selected.
 - **macOS is Apple Silicon (arm64) only** — no Intel build. If that's needed, add a
   `darwin/amd64` matrix entry in `.github/workflows/release.yml` alongside the
   `darwin/arm64` one.
