@@ -3,6 +3,17 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.9.1 — Fix REALITY connections after the sing-box migration
+
+VLESS+REALITY servers failed to connect after v0.9.0 with a `connection download closed:
+unknown version: 72` / `EOF` error in the log. Cause: REALITY only works because the
+client's TLS handshake mimics a real browser (uTLS) instead of Go's own `crypto/tls` --
+when a share link's `fp` (fingerprint) parameter was empty, `internal/xray/config.go`
+wasn't enabling uTLS at all, so the reality server couldn't recognize the connection as
+legitimate and fell back to serving its camouflage site in plaintext (the "unknown
+version" error is Go's TLS parser choking on that plaintext HTTP response). Now defaults
+`fp` to `chrome` whenever REALITY is enabled and the link didn't specify one.
+
 ## v0.9.0 — Switch engine from xray-core to sing-box
 
 Kite's embedded proxy engine is now [sing-box](https://github.com/SagerNet/sing-box)

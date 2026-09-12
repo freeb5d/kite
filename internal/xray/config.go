@@ -186,7 +186,18 @@ func tlsJSON(server profile.Server) map[string]interface{} {
 	if alpn := server.Extra["alpn"]; alpn != "" {
 		tls["alpn"] = strings.Split(alpn, ",")
 	}
-	if fp := server.Extra["fp"]; fp != "" {
+	fp := server.Extra["fp"]
+	if fp == "" && security == "reality" {
+		// REALITY only works because the client mimics a real browser's TLS
+		// fingerprint (uTLS) instead of Go's own -- without it the reality
+		// server can't distinguish us from a probe and falls back to
+		// serving its camouflage site in plaintext, which is what causes
+		// the "unknown version" TLS-parse error on our end. Most share
+		// links set fp explicitly, but default to chrome when one's
+		// missing since REALITY is unusable without some fingerprint.
+		fp = "chrome"
+	}
+	if fp != "" {
 		tls["utls"] = map[string]interface{}{"enabled": true, "fingerprint": fp}
 	}
 	if security == "reality" {
