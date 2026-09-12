@@ -3,8 +3,8 @@
 
   # Kite
 
-  **A cross-platform desktop V2Ray/Xray client.**
-  Wails + Go backend, React/Tailwind frontend, xray-core embedded as a Go library.
+  **A cross-platform desktop V2Ray/proxy client.**
+  Wails + Go backend, React/Tailwind frontend, sing-box embedded as a Go library.
 
   [![Release](https://img.shields.io/github/v/release/freeb5d/kite?label=release&color=6366f1)](https://github.com/freeb5d/kite/releases/latest)
   [![Build](https://img.shields.io/github/actions/workflow/status/freeb5d/kite/release.yml?label=build)](https://github.com/freeb5d/kite/actions/workflows/release.yml)
@@ -42,14 +42,14 @@ in one click.
 
 - **Link formats**: `vmess://`, `vless://`, `trojan://`, `ss://` — paste a share link and it's parsed and saved
 - **Subscription URLs** — paste an `http(s)://` subscription link (the base64 link-list format used by V2RayN/V2RayNG/Shadowrocket) and every server it contains is imported at once, folded into one collapsible group in the list (subscriptions can carry hundreds of servers). The group shows plan/traffic/expiry info when the provider reports it (via the `Subscription-Userinfo` header, or the fake "info" entries some providers mix into the link list), and has its own sync button to re-fetch and refresh its servers
-- **Real xray-core**, embedded as a Go library (not a shelled-out binary) — full lifecycle control, no parsing stdout for stats
-- **Transports**: TCP and WebSocket, with TLS/REALITY security detection straight from the link
+- **sing-box**, embedded as a Go library (not a shelled-out binary) — full lifecycle control, no parsing stdout for stats
+- **Transports**: TCP, WebSocket, and gRPC, with TLS/REALITY security detection straight from the link
 - **System proxy integration** — Connect/Disconnect toggles the OS HTTP proxy automatically (per-user registry on Windows, no elevation needed)
 - **TUN mode (Windows)** — routes all system traffic through a virtual network adapter (WinTun, bundled), instead of just apps that honor a proxy setting. Needs administrator privileges; Kite can relaunch itself elevated with one click
 - **Kill switch (Windows)** — blocks all outbound traffic except Kite's own while connected, via a Windows Firewall rule pair, so an app that ignores the system proxy (or a crashed xray process) can't leak traffic outside the tunnel. Same admin requirement as TUN mode
 - **System tray** — closing the window hides it to the tray instead of quitting, so an active connection keeps running; the tray menu has Show Kite, Disconnect, and Quit Kite
-- **Built-in diagnostics** — a Test button makes a real request through the tunnel and reports the actual result; a log viewer surfaces xray-core's own debug log inline; a "Show more" panel expands to live upload/download speed and session totals, read from xray-core's own stats manager
-- **Self-updating** — checks GitHub Releases on launch, one click downloads, swaps, and relaunches (About panel shows both Kite's and the embedded xray-core's version)
+- **Built-in diagnostics** — a Test button makes a real request through the tunnel and reports the actual result; a log viewer surfaces sing-box's own debug log inline
+- **Self-updating** — checks GitHub Releases on launch, one click downloads, swaps, and relaunches (About panel shows both Kite's and the embedded sing-box's version)
 - **Dark / light themes**, with a searchable server list, inline rename, and one-click remove
 - **7 languages** — English (default), 中文, فارسی, Türkçe, العربية, Français, Deutsch, switchable from the sidebar (Persian uses the bundled Vazirmatn font)
 
@@ -58,7 +58,7 @@ in one click.
 ### One-time toolchain setup
 
 1. **Go 1.27+** — https://go.dev/dl/. Windows also needs a C compiler for CGO
-   (xray-core and some Wails dependencies use it) — install
+   (Wails and some of its dependencies use it) — install
    [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) or `winget install -e --id GoLang.Go`
    plus MSYS2's `mingw-w64-x86_64-gcc`.
 2. **Node.js (LTS)** — https://nodejs.org, or `winget install OpenJS.NodeJS.LTS`.
@@ -89,10 +89,13 @@ kite/
 ├── main.go / app.go        Wails entrypoint + the App struct (Go methods
 │                            exposed to the frontend via the JS bridge)
 ├── internal/
-│   ├── xray/                xray-core lifecycle
-│   │   ├── manager.go        Start/Stop/Restart a real core.Instance
-│   │   ├── config.go         Server profile -> Xray JSON config ->
-│   │   │                     conf.Config.Build() -> *core.Config
+│   ├── xray/                sing-box lifecycle (package/dir keeps the
+│   │   │                     historical name from when it wrapped
+│   │   │                     xray-core -- see CHANGELOG)
+│   │   ├── manager.go        Start/Stop/Restart a real box.Box
+│   │   ├── config.go         Server profile -> sing-box JSON config,
+│   │   │                     decoded via sing-box's own registry-aware
+│   │   │                     JSON decoder (see include.Context)
 │   │   ├── stats.go          Traffic counters (stub, see below)
 │   │   └── tun_windows.go    Writes the embedded wintun.dll next to the
 │   │                         exe (TUN mode needs it alongside the binary)
@@ -122,15 +125,23 @@ the frontend once `wails dev`/`wails build` generates `frontend/wailsjs/go/main/
 
 ## Known gaps / next steps
 
+- **No `type=tcp&headerType=http` links** — sing-box (which Kite switched to from
+  xray-core) has no equivalent of that raw-TCP-disguised-as-HTTP transport; its
+  transports are ws/http/grpc/httpupgrade/quic only. A share link relying on that
+  specific obfuscation won't connect. Everything else Kite supported under xray-core
+  (tcp, ws, grpc, tls, REALITY) still works.
+- **Live traffic stats are a stub again** — the "Show more" panel's numbers always read
+  0B/s after the sing-box migration. xray-core exposed a stats manager with per-outbound
+  counters directly; sing-box only tracks traffic when its `experimental.clash_api` (or
+  `v2ray_api`) is enabled, via `trafficcontrol.Manager` — wiring that up is a follow-up.
 - **macOS is Apple Silicon (arm64) only** — no Intel build. If that's needed, add a
   `darwin/amd64` matrix entry in `.github/workflows/release.yml` alongside the
   `darwin/arm64` one.
 - **TUN mode is Windows-only** and IPv4-only for now — the exception route that keeps
-  xray's own upstream connection from looping through the TUN adapter
+  the engine's own upstream connection from looping through the TUN adapter
   (`internal/system/route_windows.go`) only covers resolved IPv4 addresses; a server
   that's only reachable over IPv6 won't work in TUN mode yet. Linux/macOS TUN support is
-  possible (xray-core's own `proxy/tun` package already supports both) but isn't wired
-  up here.
+  possible (sing-box's own `tun` package already supports both) but isn't wired up here.
 - **Linux system proxy only covers GNOME** (`gsettings`) — other desktop environments
   need their own backend in `internal/system/proxy_linux.go`.
 - **Kill switch is Windows-only** — implemented via `netsh advfirewall` rules

@@ -5,22 +5,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/debug"
+	"strings"
 
 	"github.com/freeb5d/kite/internal/profile"
-	"github.com/xtls/xray-core/core"
-	"github.com/xtls/xray-core/infra/conf"
 )
 
 const (
 	HTTPInboundPort  = 2080
 	SOCKSInboundPort = 2081
 
-	// TUNGateway is the point-to-point address xray-core assigns to the
-	// TUN adapter (Windows/Linux) when it's brought up.
-	TUNGateway = "10.10.0.1/24"
+	// TUNGateway is the address (with netmask) sing-box assigns to the
+	// TUN adapter itself when it's brought up.
+	TUNGateway = "172.19.0.1/30"
 )
 
-// Mode selects what xray-core listens on: a local HTTP/SOCKS proxy the OS
+// Mode selects what the engine listens on: a local HTTP/SOCKS proxy the OS
 // or individual apps are pointed at, or a TUN network adapter that
 // captures all IP traffic routed to it.
 type Mode string
@@ -30,13 +30,23 @@ const (
 	ModeTUN   Mode = "tun"
 )
 
-// CoreVersion returns the embedded xray-core version (e.g. "1.8.24"),
-// for display in the About panel.
+// CoreVersion returns the embedded sing-box version (e.g. "1.11.0"), for
+// display in the About panel. sing-box's own constant.Version is only set
+// via a build-time ldflag we don't pass, so this reads the resolved
+// module version straight from the Go module graph instead -- works on
+// any build without extra ldflags.
 func CoreVersion() string {
-	return core.Version()
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, dep := range info.Deps {
+			if dep.Path == "github.com/sagernet/sing-box" {
+				return strings.TrimPrefix(dep.Version, "v")
+			}
+		}
+	}
+	return "unknown"
 }
 
-// LogFilePath returns where xray-core's own error log is written, so it can
+// LogFilePath returns where sing-box's own error log is written, so it can
 // be surfaced in the UI when a connection silently fails to actually route
 // traffic (started fine, but the outbound handshake/dial is failing).
 func LogFilePath() string {
@@ -46,271 +56,173 @@ func LogFilePath() string {
 	}
 	logDir := filepath.Join(dir, "kite", "logs")
 	_ = os.MkdirAll(logDir, 0o700)
-	return filepath.Join(logDir, "xray.log")
+	return filepath.Join(logDir, "sing-box.log")
 }
 
-// BuildConfig turns a saved server profile into a *core.Config by building
-// the standard Xray JSON config shape and running it through xray-core's
-// own conf.Config loader — the same path xray-core uses when loading a
-// config file from disk, so every protocol/transport it understands is
-// supported without us re-implementing its internal proto types.
-func BuildConfig(server profile.Server, mode Mode) (*core.Config, error) {
-	raw, err := buildJSON(server, mode)
-	if err != nil {
-		return nil, err
-	}
-
-	var jsonConfig conf.Config
-	if err := json.Unmarshal(raw, &jsonConfig); err != nil {
-		return nil, fmt.Errorf("invalid generated xray config: %w", err)
-	}
-
-	pbConfig, err := jsonConfig.Build()
-	if err != nil {
-		return nil, fmt.Errorf("failed to build xray config: %w", err)
-	}
-	return pbConfig, nil
-}
-
+// buildJSON turns a saved server profile into a sing-box JSON config --
+// the same shape sing-box's own config file uses, so it's parsed through
+// sing-box's own decoder (see manager.go) rather than us re-implementing
+// its internal option types.
+//
+// NOTE: sing-box has no equivalent of xray-core's tcp "headerType=http"
+// disguise (a raw TCP connection dressed up as a plaintext HTTP request
+// so an HTTP-sniffing front end doesn't reject it) -- its transports are
+// ws/http/grpc/httpupgrade/quic only, so a link relying on that specific
+// obfuscation won't work after this migration. Every other transport/
+// security combination Kite supported under xray-core (tcp, ws, tls,
+// REALITY) is covered here.
 func buildJSON(server profile.Server, mode Mode) ([]byte, error) {
-	outbound, err := outboundSettings(server)
+	outbound, err := outboundJSON(server)
 	if err != nil {
 		return nil, err
 	}
 
 	inbounds := []map[string]interface{}{
 		{
-			"tag":      "http-in",
-			"protocol": "http",
-			"listen":   "127.0.0.1",
-			"port":     HTTPInboundPort,
+			"type":        "http",
+			"tag":         "http-in",
+			"listen":      "127.0.0.1",
+			"listen_port": HTTPInboundPort,
 		},
 		{
-			"tag":      "socks-in",
-			"protocol": "socks",
-			"listen":   "127.0.0.1",
-			"port":     SOCKSInboundPort,
-			"settings": map[string]interface{}{"udp": true},
+			"type":        "mixed",
+			"tag":         "socks-in",
+			"listen":      "127.0.0.1",
+			"listen_port": SOCKSInboundPort,
 		},
 	}
 
 	if mode == ModeTUN {
-		// port/listen are ignored for this inbound -- it's not a proxy
-		// listener, it's a virtual network adapter. Leaving "name" unset
-		// lets xray-core auto-pick a free interface name.
-		// autoSystemRoutingTable makes xray-core itself add (and later
-		// remove) the system default route through the adapter; the
-		// exception route for the VPN server's own IP -- required so
-		// xray's own outbound connection doesn't loop back through the
-		// adapter it's feeding -- is added separately by the caller
-		// (internal/system.AddExceptionRoute) *before* this inbound
-		// comes up.
+		// sing-box brings up the TUN adapter and its own default route
+		// itself (auto_route) the same way xray-core's TUN inbound did;
+		// the exception route for the VPN server's own IP -- required so
+		// the engine's own outbound connection doesn't loop back through
+		// the adapter it's feeding -- is added separately by the caller
+		// (internal/system.AddExceptionRoute) *before* this inbound comes
+		// up, same as before.
 		inbounds = append(inbounds, map[string]interface{}{
-			"tag":      "tun-in",
-			"protocol": "tun",
-			"settings": map[string]interface{}{
-				"desc":                   "Wintun",
-				"mtu":                    1500,
-				"gateway":                []string{TUNGateway},
-				"autoSystemRoutingTable": []string{"0.0.0.0/0"},
-			},
+			"type":           "tun",
+			"tag":            "tun-in",
+			"interface_name": "kite-tun",
+			"address":        []string{TUNGateway},
+			"mtu":            1500,
+			"auto_route":     true,
+			"stack":          "gvisor",
 		})
 	}
 
 	config := map[string]interface{}{
 		"log": map[string]interface{}{
-			"loglevel": "debug",
-			"error":    LogFilePath(),
+			"level":  "debug",
+			"output": LogFilePath(),
 		},
 		"inbounds": inbounds,
 		"outbounds": []map[string]interface{}{
-			{
-				"tag":            "proxy",
-				"protocol":       server.Protocol,
-				"settings":       outbound,
-				"streamSettings": streamSettings(server),
-			},
-			{
-				"tag":      "direct",
-				"protocol": "freedom",
-			},
-		},
-		// Enables the "proxy" outbound's traffic counters (stats.Manager
-		// registers "outbound>>>proxy>>>traffic>>>uplink"/"downlink"),
-		// read by Manager.Traffic() for the live traffic display.
-		"stats": map[string]interface{}{},
-		"policy": map[string]interface{}{
-			"system": map[string]interface{}{
-				"statsOutboundUplink":   true,
-				"statsOutboundDownlink": true,
-			},
+			outbound,
+			{"type": "direct", "tag": "direct"},
 		},
 	}
 
 	return json.Marshal(config)
 }
 
-// outboundSettings builds the protocol-specific "settings" object using the
-// classic nested "vnext"/"servers" array shape (rather than the newer flat
-// address/port/id shorthand some conf.*OutboundConfig types also accept),
-// since the nested shape is understood by every xray-core version we might
-// end up building against.
-func outboundSettings(server profile.Server) (map[string]interface{}, error) {
+// outboundJSON builds the "proxy" outbound entry (protocol fields +
+// transport + tls) from the extra fields captured while parsing the
+// share link.
+func outboundJSON(server profile.Server) (map[string]interface{}, error) {
+	base := map[string]interface{}{
+		"tag":         "proxy",
+		"server":      server.Address,
+		"server_port": server.Port,
+	}
+
 	switch server.Protocol {
 	case "vmess":
-		return map[string]interface{}{
-			"vnext": []map[string]interface{}{
-				{
-					"address": server.Address,
-					"port":    server.Port,
-					"users": []map[string]interface{}{
-						{
-							"id":       server.UUID,
-							"security": firstNonEmpty(server.Extra["security"], "auto"),
-						},
-					},
-				},
-			},
-		}, nil
+		base["type"] = "vmess"
+		base["uuid"] = server.UUID
+		base["security"] = "auto"
 	case "vless":
-		return map[string]interface{}{
-			"vnext": []map[string]interface{}{
-				{
-					"address": server.Address,
-					"port":    server.Port,
-					"users": []map[string]interface{}{
-						{
-							"id":         server.UUID,
-							"encryption": firstNonEmpty(server.Extra["encryption"], "none"),
-							"flow":       server.Extra["flow"],
-						},
-					},
-				},
-			},
-		}, nil
+		base["type"] = "vless"
+		base["uuid"] = server.UUID
+		if flow := server.Extra["flow"]; flow != "" {
+			base["flow"] = flow
+		}
 	case "trojan":
-		return map[string]interface{}{
-			"servers": []map[string]interface{}{
-				{
-					"address":  server.Address,
-					"port":     server.Port,
-					"password": server.Password,
-				},
-			},
-		}, nil
+		base["type"] = "trojan"
+		base["password"] = server.Password
 	case "shadowsocks":
-		return map[string]interface{}{
-			"servers": []map[string]interface{}{
-				{
-					"address":  server.Address,
-					"port":     server.Port,
-					"method":   server.Method,
-					"password": server.Password,
-				},
-			},
-		}, nil
+		base["type"] = "shadowsocks"
+		base["method"] = server.Method
+		base["password"] = server.Password
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q", server.Protocol)
 	}
+
+	if tls := tlsJSON(server); tls != nil {
+		base["tls"] = tls
+	}
+	if transport := transportJSON(server); transport != nil {
+		base["transport"] = transport
+	}
+	return base, nil
 }
 
-// streamSettings builds the "streamSettings" object (network + optional TLS)
-// from the extra fields captured while parsing the share link. vmess://
-// links are base64 JSON and use "net"/"tls" (mapped by parser.go to
-// Extra["network"]/Extra["tls"]); vless://, trojan://, ss:// links are
-// plain query strings that use "type"/"security" instead -- both are
-// checked here since Extra just holds whatever the link actually used.
-func streamSettings(server profile.Server) map[string]interface{} {
-	network := firstNonEmpty(server.Extra["network"], server.Extra["type"], "tcp")
-	settings := map[string]interface{}{"network": network}
-
+// tlsJSON builds the outbound "tls" object, including REALITY/uTLS, from
+// the extra fields captured while parsing the share link. vmess:// links
+// are base64 JSON and use "tls" (mapped by parser.go to Extra["tls"]);
+// vless://, trojan://, ss:// links are plain query strings that use
+// "security" instead -- both are checked here since Extra just holds
+// whatever the link actually used.
+func tlsJSON(server profile.Server) map[string]interface{} {
 	security := firstNonEmpty(server.Extra["security"], server.Extra["tls"])
-	switch security {
-	case "tls":
-		settings["security"] = "tls"
-		tlsSettings := map[string]interface{}{"allowInsecure": false}
-		if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"]); sni != "" {
-			tlsSettings["serverName"] = sni
-		}
-		// alpn is skipped for ws/websocket: the WS transport shares its
-		// tls.Config with net/http, and an alpn list that includes "h2"
-		// makes Go negotiate HTTP/2 instead of the plain WS upgrade,
-		// failing every dial with `websocket: protocol "h2" was given
-		// but is not supported`. ws requires http/1.1 semantics anyway,
-		// so there's nothing useful alpn would add here.
-		if alpn := server.Extra["alpn"]; alpn != "" && network != "ws" && network != "websocket" {
-			tlsSettings["alpn"] = alpn
-		}
-		if fp := server.Extra["fp"]; fp != "" {
-			tlsSettings["fingerprint"] = fp
-		}
-		settings["tlsSettings"] = tlsSettings
-
-	case "reality":
-		// REALITY is its own security type, not TLS -- sending it as "tls"
-		// makes the client do a normal TLS handshake against the real
-		// (camouflaged) destination REALITY proxies unauthenticated
-		// connections to, which then answers with a plain HTTP response
-		// instead of VLESS: exactly the "unexpected response version...
-		// actually 72" ('H' from "HTTP/1.1") error this was producing.
-		settings["security"] = "reality"
-		realitySettings := map[string]interface{}{"show": false}
-		if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"]); sni != "" {
-			realitySettings["serverName"] = sni
-		}
-		if fp := server.Extra["fp"]; fp != "" {
-			realitySettings["fingerprint"] = fp
-		}
-		if pbk := server.Extra["pbk"]; pbk != "" {
-			realitySettings["publicKey"] = pbk
-		}
-		if sid := server.Extra["sid"]; sid != "" {
-			realitySettings["shortId"] = sid
-		}
-		if spx := server.Extra["spx"]; spx != "" {
-			realitySettings["spiderX"] = spx
-		}
-		settings["realitySettings"] = realitySettings
+	if security != "tls" && security != "reality" {
+		return nil
 	}
 
+	tls := map[string]interface{}{"enabled": true}
+	if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"]); sni != "" {
+		tls["server_name"] = sni
+	}
+	if alpn := server.Extra["alpn"]; alpn != "" {
+		tls["alpn"] = strings.Split(alpn, ",")
+	}
+	if fp := server.Extra["fp"]; fp != "" {
+		tls["utls"] = map[string]interface{}{"enabled": true, "fingerprint": fp}
+	}
+	if security == "reality" {
+		tls["reality"] = map[string]interface{}{
+			"enabled":    true,
+			"public_key": server.Extra["pbk"],
+			"short_id":   server.Extra["sid"],
+		}
+	}
+	return tls
+}
+
+// transportJSON builds the outbound "transport" object for ws/grpc.
+// Plain tcp (the default when no transport is specified) needs nothing
+// here.
+func transportJSON(server profile.Server) map[string]interface{} {
+	network := firstNonEmpty(server.Extra["network"], server.Extra["type"], "tcp")
 	switch network {
 	case "ws", "websocket":
-		ws := map[string]interface{}{"path": firstNonEmpty(server.Extra["path"], "/")}
+		transport := map[string]interface{}{
+			"type": "ws",
+			"path": firstNonEmpty(server.Extra["path"], "/"),
+		}
 		if host := server.Extra["host"]; host != "" {
-			ws["headers"] = map[string]interface{}{"Host": host}
+			transport["headers"] = map[string]interface{}{"Host": host}
 		}
-		settings["wsSettings"] = ws
-
-	case "tcp":
-		// headerType=http disguises the raw VLESS/VMess bytes behind a
-		// plaintext HTTP request, so an HTTP-sniffing front (nginx, a CDN)
-		// in front of the real server doesn't reject the connection. Without
-		// sending that disguise header, the client's raw request looks like
-		// garbage to that front end, which answers with a plain HTTP
-		// response instead of proxying through -- the client then fails
-		// decoding it as a VLESS reply ("unexpected response version...
-		// actually 72", 'H' from "HTTP/1.1").
-		if firstNonEmpty(server.Extra["headerType"], server.Extra["header"]) == "http" {
-			host := firstNonEmpty(server.Extra["host"], server.Address)
-			settings["tcpSettings"] = map[string]interface{}{
-				"header": map[string]interface{}{
-					"type": "http",
-					"request": map[string]interface{}{
-						"version": "1.1",
-						"method":  "GET",
-						"path":    []string{firstNonEmpty(server.Extra["path"], "/")},
-						"headers": map[string]interface{}{
-							"Host":       []string{host},
-							"User-Agent": []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
-							"Connection": []string{"keep-alive"},
-						},
-					},
-				},
-			}
+		return transport
+	case "grpc":
+		transport := map[string]interface{}{"type": "grpc"}
+		if svc := firstNonEmpty(server.Extra["serviceName"], server.Extra["path"]); svc != "" {
+			transport["service_name"] = svc
 		}
+		return transport
+	default:
+		return nil
 	}
-
-	return settings
 }
 
 func firstNonEmpty(values ...string) string {

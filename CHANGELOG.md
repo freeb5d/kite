@@ -3,6 +3,29 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.9.0 — Switch engine from xray-core to sing-box
+
+Kite's embedded proxy engine is now [sing-box](https://github.com/SagerNet/sing-box)
+instead of xray-core. `internal/xray` keeps its historical name/package path (renaming it
+wasn't worth the churn across the rest of the codebase) but its `manager.go`/`config.go`
+are rewritten from scratch against sing-box's Go API: a `box.Box` instance built from
+`option.Options` decoded via sing-box's own registry-aware JSON decoder
+(`include.Context` + `json.UnmarshalContext`), instead of xray-core's `core.Instance` +
+`conf.Config`.
+
+- vmess, vless, trojan, and shadowsocks over tcp/ws/grpc, with TLS/REALITY/uTLS, all
+  carried over.
+- TUN mode carried over (sing-box's own `tun` package), including the retry-on-
+  adapter-still-releasing logic and the antivirus/wintun.dll error hint from v0.8.5-8.
+- **Regression**: sing-box has no equivalent of xray-core's `type=tcp&headerType=http`
+  disguise -- a link relying on that specific obfuscation won't connect anymore. See
+  README known gaps.
+- **Regression**: live traffic stats (the "Show more" panel) are a stub again, always
+  reading 0B/s -- xray-core's stats manager doesn't have a sing-box equivalent without
+  enabling its clash-api, which isn't wired up yet. See README known gaps.
+- `App.XrayVersion()` (About panel) now reads the resolved `sing-box` module version from
+  the Go build info instead of xray-core's `core.Version()`.
+
 ## v0.8.8 — Retry TUN reconnect instead of guessing a fixed wait
 
 - v0.8.7's fixed 800ms pause after a TUN disconnect wasn't reliably

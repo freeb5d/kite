@@ -10,8 +10,8 @@ import (
 )
 
 // prepareTUN writes the embedded wintun.dll next to the running
-// executable if it isn't there yet -- xray-core's TUN inbound looks for
-// it in that exact location on Windows.
+// executable if it isn't there yet -- sing-box's TUN inbound looks for
+// it in that exact location on Windows (same as xray-core did).
 func prepareTUN() error {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -26,7 +26,7 @@ func prepareTUN() error {
 
 // missingTUNDLL reports whether wintun.dll is (no longer) present next
 // to the running executable -- used to give a clearer error than
-// whatever generic OS message xray-core's own LoadLibrary call surfaces
+// whatever generic OS message the underlying LoadLibrary call surfaces
 // when it can't find it.
 func missingTUNDLL() bool {
 	exePath, err := os.Executable()

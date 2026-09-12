@@ -1,9 +1,12 @@
-// Package xray wraps xray-core as an in-process Go library: it builds a
-// config from a server profile, and starts/stops/restarts an xray instance
-// without shelling out to an external binary.
+// Package xray wraps sing-box as an in-process Go library: it builds a
+// config from a server profile, and starts/stops/restarts a sing-box
+// instance without shelling out to an external binary. (Package/directory
+// keeps the historical "xray" name from when it wrapped xray-core --
+// renaming it wasn't worth the churn across the rest of the codebase.)
 package xray
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -11,16 +14,13 @@ import (
 	"sync"
 	"time"
 
+	box "github.com/sagernet/sing-box"
+	"github.com/sagernet/sing-box/include"
+	"github.com/sagernet/sing-box/option"
+	singjson "github.com/sagernet/sing/common/json"
+
 	"github.com/freeb5d/kite/internal/profile"
 	"github.com/freeb5d/kite/internal/system"
-	"github.com/xtls/xray-core/core"
-	"github.com/xtls/xray-core/features/stats"
-
-	// Registers every protocol/transport xray-core ships (vmess, vless,
-	// trojan, shadowsocks, http/socks/tun inbounds, ws/tls, ...) with the
-	// config loaders used by BuildConfig. Without this blank import,
-	// core.New fails with "unknown protocol" for everything.
-	_ "github.com/xtls/xray-core/main/distro/all"
 )
 
 type State string
@@ -39,14 +39,13 @@ type Status struct {
 	Message string `json:"message,omitempty"`
 }
 
-// Manager owns the lifecycle of a single running xray-core instance.
+// Manager owns the lifecycle of a single running sing-box instance.
 type Manager struct {
 	mu              sync.Mutex
 	status          Status
-	instance        *core.Instance
+	instance        *box.Box
+	cancel          context.CancelFunc
 	exceptionRoutes []string
-	uplinkCounter   stats.Counter
-	downlinkCounter stats.Counter
 }
 
 func NewManager() *Manager {
@@ -58,7 +57,7 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 	defer m.mu.Unlock()
 
 	if m.status.State == StateRunning {
-		return errors.New("xray is already running; call Stop or Restart first")
+		return errors.New("sing-box is already running; call Stop or Restart first")
 	}
 
 	var addedRoutes []string
@@ -88,7 +87,7 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 		}
 	}
 
-	pbConfig, err := BuildConfig(server, mode)
+	configBytes, err := buildJSON(server, mode)
 	if err != nil {
 		for _, r := range addedRoutes {
 			_ = system.RemoveExceptionRoute(r)
@@ -97,24 +96,37 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 		return err
 	}
 
-	// TUN mode specifically gets retried: xray-core's TUN inbound doesn't
+	ctx, cancel := context.WithCancel(context.Background())
+	ctx = include.Context(ctx)
+
+	var opts option.Options
+	if err := singjson.UnmarshalContext(ctx, configBytes, &opts); err != nil {
+		cancel()
+		for _, r := range addedRoutes {
+			_ = system.RemoveExceptionRoute(r)
+		}
+		err = fmt.Errorf("invalid generated sing-box config: %w", err)
+		m.status = Status{State: StateError, Message: err.Error()}
+		return err
+	}
+
+	// TUN mode specifically gets retried: sing-box's TUN inbound doesn't
 	// finish tearing down the previous Wintun adapter/session
 	// synchronously within Close(), so reconnecting soon after a TUN
 	// disconnect can hit that still-being-released adapter/session and
 	// fail with a Windows "An attempt was made to perform an
 	// initialization operation when initialization has already been
-	// completed" error. A fixed pause after Stop() wasn't reliably long
-	// enough, so retry here instead -- each attempt rebuilds a fresh
-	// core.Instance, since one that failed to Start() isn't safely
-	// reusable.
+	// completed" error. Retry rather than guess a fixed pause -- each
+	// attempt rebuilds a fresh instance, since one that failed to
+	// Start() isn't safely reusable.
 	attempts := 1
 	if mode == ModeTUN {
 		attempts = 5
 	}
 
-	var instance *core.Instance
+	var instance *box.Box
 	for attempt := 1; attempt <= attempts; attempt++ {
-		instance, err = core.New(pbConfig)
+		instance, err = box.New(box.Options{Context: ctx, Options: opts})
 		if err != nil {
 			break
 		}
@@ -129,6 +141,7 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 		break
 	}
 	if err != nil {
+		cancel()
 		for _, r := range addedRoutes {
 			_ = system.RemoveExceptionRoute(r)
 		}
@@ -149,18 +162,9 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 	}
 
 	m.instance = instance
+	m.cancel = cancel
 	m.exceptionRoutes = addedRoutes
 	m.status = Status{State: StateRunning, Server: server.Name, Mode: mode}
-
-	m.uplinkCounter, m.downlinkCounter = nil, nil
-	if sm := instance.GetFeature(stats.ManagerType()); sm != nil {
-		if manager, ok := sm.(stats.Manager); ok {
-			// Registered by the "proxy" outbound because buildJSON turns on
-			// policy.system.statsOutboundUplink/Downlink -- see config.go.
-			m.uplinkCounter = manager.GetCounter("outbound>>>proxy>>>traffic>>>uplink")
-			m.downlinkCounter = manager.GetCounter("outbound>>>proxy>>>traffic>>>downlink")
-		}
-	}
 	return nil
 }
 
@@ -179,8 +183,10 @@ func (m *Manager) Stop() error {
 	}
 
 	err := m.instance.Close()
+	if m.cancel != nil {
+		m.cancel()
+	}
 	m.instance = nil
-	m.uplinkCounter, m.downlinkCounter = nil, nil
 	m.status = Status{State: StateStopped}
 	// A subsequent TUN-mode Start() retries through the "adapter still
 	// releasing" window itself (see isAdapterStillReleasing) rather than
