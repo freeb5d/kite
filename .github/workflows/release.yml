@@ -96,13 +96,37 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
 
+      # Use this tag's own CHANGELOG.md section as the release notes
+      # (already written with an emoji + a plain-language explanation of
+      # what changed and why) instead of GitHub's auto-generated raw
+      # commit list, which reads like a diff, not a changelog.
+      - name: Extract changelog section for this tag
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v ver="$version" '
+            BEGIN { found = 0 }
+            /^## / {
+              if (found) exit
+              if ($0 ~ "## .* v" ver "( |$)") { found = 1; next }
+              next
+            }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No CHANGELOG.md section found for ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          generate_release_notes: true
+          body_path: release-notes.md
