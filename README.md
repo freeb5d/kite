@@ -4,7 +4,7 @@
   # Kite
 
   **A cross-platform desktop V2Ray/proxy client.**
-  Wails + Go backend, React/Tailwind frontend, sing-box embedded as a Go library.
+  Wails + Go backend, React/Tailwind frontend, xray-core/sing-box embedded as Go libraries.
 
   [![Release](https://img.shields.io/github/v/release/freeb5d/kite?label=release&color=6366f1)](https://github.com/freeb5d/kite/releases/latest)
   [![Build](https://img.shields.io/github/actions/workflow/status/freeb5d/kite/release.yml?label=build)](https://github.com/freeb5d/kite/actions/workflows/release.yml)
