@@ -1,4 +1,7 @@
-package xray
+// Package singbox wraps sing-box as an in-process Go library: it builds a
+// config from a server profile, and starts/stops/restarts a sing-box
+// instance without shelling out to an external binary.
+package singbox
 
 import (
 	"encoding/json"
@@ -21,9 +24,11 @@ const (
 )
 
 // Mode selects what the engine listens on: a local HTTP/SOCKS proxy the OS
-// or individual apps are pointed at, or a TUN network adapter that
-// captures all IP traffic routed to it.
-type Mode string
+// or individual apps are pointed at ("proxy"), or a TUN network adapter
+// that captures all IP traffic routed to it ("tun"). It's a plain string
+// (rather than the facade's engine.Mode) so this package has no
+// dependency on the facade -- see internal/xray's doc comment.
+type Mode = string
 
 const (
 	ModeProxy Mode = "proxy"

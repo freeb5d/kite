@@ -1,6 +1,6 @@
 //go:build windows
 
-package xray
+package singbox
 
 import (
 	"os"

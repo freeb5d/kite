@@ -31,6 +31,8 @@ const dict = {
     killSwitch: 'Kill switch',
     killSwitchNeedsAdmin: 'Kill switch needs administrator privileges.',
     restartAsAdmin: 'Restart as admin',
+    engine: 'Engine',
+    engineDisconnectFirst: 'Disconnect to switch engines.',
     connecting: 'Connecting…',
     disconnecting: 'Disconnecting…',
     connected: 'Connected',

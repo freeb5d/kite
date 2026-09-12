@@ -24,6 +24,9 @@ import {
   Platform,
   IsElevated,
   RestartElevated,
+  EngineName,
+  GetEngine,
+  SetEngine,
 } from '../wailsjs/go/main/App'
 
 function errorText(err) {
@@ -163,6 +166,10 @@ export default function App() {
   const [pending, setPending] = useState(false)
   const [version, setVersion] = useState('')
   const [xrayVersion, setXrayVersion] = useState('')
+  const [engineName, setEngineName] = useState('')
+  const [engine, setEngineState] = useState('xray')
+  const [engineChanging, setEngineChanging] = useState(false)
+  const [engineError, setEngineError] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editingName, setEditingName] = useState('')
   const [query, setQuery] = useState('')
@@ -241,6 +248,8 @@ export default function App() {
     Status().then(setStatus).catch(() => {})
     Version().then(setVersion).catch(() => {})
     XrayVersion().then(setXrayVersion).catch(() => {})
+    EngineName().then(setEngineName).catch(() => {})
+    GetEngine().then(setEngineState).catch(() => {})
     CheckForUpdate().then(setUpdateInfo).catch(() => {})
     Platform().then(setPlatform).catch(() => {})
     IsElevated().then(setElevated).catch(() => {})
@@ -520,6 +529,23 @@ export default function App() {
       setUpdateError(errorText(err))
     } finally {
       setCheckingUpdate(false)
+    }
+  }
+
+  async function handleEngineChange(next) {
+    if (next === engine) return
+    setEngineChanging(true)
+    setEngineError('')
+    try {
+      await SetEngine(next)
+      setEngineState(next)
+      const [name, ver] = await Promise.all([EngineName(), XrayVersion()])
+      setEngineName(name)
+      setXrayVersion(ver)
+    } catch (err) {
+      setEngineError(errorText(err))
+    } finally {
+      setEngineChanging(false)
     }
   }
 
@@ -979,11 +1005,35 @@ export default function App() {
             <h2 className="text-lg font-semibold">Kite</h2>
             <p className="text-xs text-[var(--text-faint)] mt-1">
               v{version.replace(/^v/, '')}
-              {xrayVersion && <> · xray-core {xrayVersion}</>}
+              {engineName && <> · {engineName}{xrayVersion ? ` ${xrayVersion}` : ''}</>}
             </p>
             <p className="text-sm text-[var(--text-dim)] mt-4">
               {t('aboutDescription')}
             </p>
+
+            <div className="mt-4">
+              <p className="text-[11px] text-[var(--text-faint)] mb-1.5">{t('engine')}</p>
+              <div className="flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border-strong)] p-1 mx-auto max-w-[220px]">
+                {['xray', 'singbox'].map((opt) => (
+                  <button
+                    key={opt}
+                    disabled={engineChanging || status.state === 'running'}
+                    onClick={() => handleEngineChange(opt)}
+                    className={`flex-1 text-xs rounded-md px-2 py-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                      engine === opt
+                        ? 'bg-[var(--accent)] text-white'
+                        : 'hover:bg-[var(--bg-hover)] text-[var(--text-dim)]'
+                    }`}
+                  >
+                    {opt === 'xray' ? 'xray-core' : 'sing-box'}
+                  </button>
+                ))}
+              </div>
+              {status.state === 'running' && (
+                <p className="text-[10px] text-[var(--text-faint)] mt-1.5">{t('engineDisconnectFirst')}</p>
+              )}
+              {engineError && <p className="text-[10px] text-red-400 mt-1.5">{engineError}</p>}
+            </div>
 
             <div
               className="mt-4 flex items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] px-3 py-1.5 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors"

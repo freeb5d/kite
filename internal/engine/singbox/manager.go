@@ -1,9 +1,4 @@
-// Package xray wraps sing-box as an in-process Go library: it builds a
-// config from a server profile, and starts/stops/restarts a sing-box
-// instance without shelling out to an external binary. (Package/directory
-// keeps the historical "xray" name from when it wrapped xray-core --
-// renaming it wasn't worth the churn across the rest of the codebase.)
-package xray
+package singbox
 
 import (
 	"context"

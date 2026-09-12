@@ -440,9 +440,31 @@ func (a *App) Version() string {
 	return version
 }
 
-// XrayVersion returns the embedded xray-core version, for the About panel.
+// XrayVersion returns the embedded version of whichever engine
+// (xray-core or sing-box) is currently selected, for the About panel.
 func (a *App) XrayVersion() string {
 	return xray.CoreVersion()
+}
+
+// EngineName returns a human-readable label ("xray-core"/"sing-box") for
+// the currently selected engine, for the About panel.
+func (a *App) EngineName() string {
+	return xray.EngineName()
+}
+
+// GetEngine returns the persisted engine choice ("xray" or "singbox").
+func (a *App) GetEngine() string {
+	return string(xray.CurrentEngine())
+}
+
+// SetEngine changes which engine future connections use. Rejected while
+// connected, since switching engines out from under a live connection
+// would leave the running instance orphaned.
+func (a *App) SetEngine(engine string) error {
+	if a.manager.Status().State == xray.StateRunning {
+		return fmt.Errorf("disconnect before switching engines")
+	}
+	return xray.SetEngine(xray.Engine(engine))
 }
 
 // --- Self-update methods (bound to frontend) ---

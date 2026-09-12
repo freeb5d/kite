@@ -3,6 +3,22 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.10.0 — Bring back xray-core as a selectable engine (now the default)
+
+The v0.9.0 sing-box migration traded away xray-core's `tcp&headerType=http` transport
+with no replacement -- some servers (the "Ninja-29" report) simply can't be reached
+under sing-box at all. Rather than pick one engine's limitations over the other's,
+Kite now embeds both and lets you switch from the About panel: **xray-core is the new
+default** (broader transport support), **sing-box is the only one with TUN mode**
+(xray-core has no TUN inbound here). The choice is global and persisted
+(`settings.json` next to `servers.json`), and can only be changed while disconnected.
+
+`internal/xray` is now a thin facade that dispatches every call to whichever concrete
+engine is selected -- `internal/engine/xraycore` (moved/rewritten from what v0.9.0
+deleted) or `internal/engine/singbox` (the code that used to live directly in
+`internal/xray`). `app.go` needed no changes beyond three new bound methods
+(`GetEngine`/`SetEngine`/`EngineName`) since the facade's public API is unchanged.
+
 ## v0.9.4 — Fix TUN mode failing with "gVisor is not included in this build"
 
 TUN mode couldn't start at all after the sing-box migration: `internal/xray/config.go`

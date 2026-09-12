@@ -1,4 +1,4 @@
-package xray
+package singbox
 
 // Traffic holds cumulative up/down byte counters for the active session.
 //
