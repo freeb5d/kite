@@ -3,6 +3,17 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## v0.9.3 — Force http/1.1 ALPN for WebSocket transport
+
+WS links whose `alpn` param included `h2` (a common default from subscription
+generators, alongside `http/1.1`/`h3`) still failed after v0.9.2's SNI fix: the TLS
+handshake completed, but the connection was closed right after by the server -- a
+TLS-terminating edge that prefers h2 (Cloudflare, notably) negotiated it from the
+offered ALPN list, turning the connection into an HTTP/2 stream that sing-box's plain
+HTTP/1.1 WebSocket-upgrade client can't work over. `internal/xray/config.go` now
+forces `alpn: ["http/1.1"]` whenever the transport is `ws`, ignoring whatever ALPN
+list the link specified for that case.
+
 ## v0.9.2 — Default TLS SNI to the server address
 
 Plain `security=tls` links with no `sni` param (and `host` present but empty, as some

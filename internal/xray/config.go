@@ -189,8 +189,21 @@ func tlsJSON(server profile.Server) map[string]interface{} {
 	if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"], server.Address); sni != "" {
 		tls["server_name"] = sni
 	}
+	network := firstNonEmpty(server.Extra["network"], server.Extra["type"], "tcp")
 	if alpn := server.Extra["alpn"]; alpn != "" {
-		tls["alpn"] = strings.Split(alpn, ",")
+		if network == "ws" || network == "websocket" {
+			// WebSocket transport is a plain HTTP/1.1 Upgrade -- if h2 (or
+			// h3, which is QUIC-only and meaningless here anyway) is in the
+			// offered ALPN list, a TLS-terminating edge that prefers h2
+			// (Cloudflare, notably) will negotiate it, turning the
+			// connection into an HTTP/2 stream that sing-box's WS client
+			// can't upgrade over. It handshakes fine and then gets closed
+			// right after, which otherwise looks identical to a working
+			// connection until that point. Force http/1.1 for ws.
+			tls["alpn"] = []string{"http/1.1"}
+		} else {
+			tls["alpn"] = strings.Split(alpn, ",")
+		}
 	}
 	fp := server.Extra["fp"]
 	if fp == "" && security == "reality" {
