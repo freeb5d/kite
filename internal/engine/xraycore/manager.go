@@ -101,14 +101,24 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 	m.status = Status{State: StateRunning, Server: server.Name, Mode: mode}
 	m.uplinkCounter, m.downlinkCounter = nil, nil
 	if statsManager, ok := instance.GetFeature(stats.ManagerType()).(stats.Manager); ok && statsManager != nil {
-		if c, err := statsManager.GetOrRegisterCounter("outbound>>>proxy>>>traffic>>>uplink"); err == nil {
-			m.uplinkCounter = c
-		}
-		if c, err := statsManager.GetOrRegisterCounter("outbound>>>proxy>>>traffic>>>downlink"); err == nil {
-			m.downlinkCounter = c
-		}
+		m.uplinkCounter = getOrRegisterCounter(statsManager, "outbound>>>proxy>>>traffic>>>uplink")
+		m.downlinkCounter = getOrRegisterCounter(statsManager, "outbound>>>proxy>>>traffic>>>downlink")
 	}
 	return nil
+}
+
+// getOrRegisterCounter is a stand-in for stats.Manager.GetOrRegisterCounter,
+// which isn't available in the xray-core version pinned in go.mod -- only
+// the separate GetCounter/RegisterCounter it's built from.
+func getOrRegisterCounter(m stats.Manager, name string) stats.Counter {
+	if c := m.GetCounter(name); c != nil {
+		return c
+	}
+	c, err := m.RegisterCounter(name)
+	if err != nil {
+		return nil
+	}
+	return c
 }
 
 func (m *Manager) Stop() error {
