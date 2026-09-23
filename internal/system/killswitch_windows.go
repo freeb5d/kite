@@ -5,61 +5,76 @@ package system
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 )
 
 const (
-	killSwitchAllowRule = "Kite Kill Switch Allow"
-	killSwitchBlockRule = "Kite Kill Switch Block"
+	killSwitchAllowKite = "Kite Kill Switch Allow"
+	killSwitchAllowTUN  = "Kite Kill Switch Allow TUN"
+	killSwitchAllowDNS  = "Kite Kill Switch Allow DNS"
+	// Rule name used by versions before the policy-based kill switch;
+	// still removed on disable so an upgrade can't leave it behind.
+	legacyKillSwitchBlock = "Kite Kill Switch Block"
+
+	// Must match the address sing-box gives its TUN adapter
+	// (internal/engine/singbox TUNGateway) -- traffic other apps send into
+	// the tunnel leaves with this as its local address.
+	tunSubnet = "172.19.0.0/30"
 )
 
-// EnableKillSwitch blocks all outbound traffic except from Kite's own
-// process (which hosts the embedded xray-core and needs to reach the VPN
-// server) and loopback -- Windows Firewall never filters 127.0.0.1
-// traffic regardless of rules, so apps that honor the system HTTP/SOCKS
-// proxy (which listens on loopback) keep working. Anything that dials
-// out directly instead of through the tunnel -- the traffic a kill
-// switch exists to stop -- gets cut off rather than silently leaking,
-// including if xray crashes while connected.
+// EnableKillSwitch blocks all outbound traffic except Kite's own (which
+// is how the embedded engine reaches the VPN server), traffic routed into
+// the TUN adapter, and the Windows DNS Client service (Go resolves names
+// through it on Windows, so the engine can't reach a hostname-based server
+// without it). Loopback is never filtered, so the local HTTP/SOCKS proxy
+// keeps working.
 //
-// Requires administrator privileges, same as TUN mode: creating firewall
-// rules needs them.
+// It flips the default outbound policy to block instead of adding a
+// "block everything" rule: Windows Firewall evaluates block rules before
+// allow rules, so a block-all rule would also cut off Kite itself.
+//
+// Requires administrator privileges.
 func EnableKillSwitch() error {
 	exePath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("locate running executable: %w", err)
 	}
 
-	if err := netsh(
-		"advfirewall", "firewall", "add", "rule",
-		"name="+killSwitchAllowRule,
-		"dir=out", "action=allow", "enable=yes",
-		"program="+exePath,
-	); err != nil {
-		return fmt.Errorf("add kill switch allow rule: %w", err)
+	rules := [][]string{
+		{"name=" + killSwitchAllowKite, "program=" + exePath},
+		{"name=" + killSwitchAllowTUN, "localip=" + tunSubnet},
+		{"name=" + killSwitchAllowDNS, "service=dnscache", "protocol=udp", "remoteport=53"},
+	}
+	for _, rule := range rules {
+		args := append([]string{"advfirewall", "firewall", "add", "rule", "dir=out", "action=allow", "enable=yes"}, rule...)
+		if err := netsh(args...); err != nil {
+			_ = DisableKillSwitch()
+			return fmt.Errorf("add kill switch rule: %w", err)
+		}
 	}
 
-	if err := netsh(
-		"advfirewall", "firewall", "add", "rule",
-		"name="+killSwitchBlockRule,
-		"dir=out", "action=block", "enable=yes",
-	); err != nil {
-		_ = removeFirewallRule(killSwitchAllowRule)
-		return fmt.Errorf("add kill switch block rule: %w", err)
+	if err := netsh("advfirewall", "set", "allprofiles", "firewallpolicy", "blockinbound,blockoutbound"); err != nil {
+		_ = DisableKillSwitch()
+		return fmt.Errorf("block outbound traffic: %w", err)
 	}
 	return nil
 }
 
-// DisableKillSwitch removes the firewall rules EnableKillSwitch added.
-// Safe to call even if they were never added.
+// DisableKillSwitch restores the Windows default outbound policy (allow)
+// and removes the rules EnableKillSwitch added. Safe to call even if the
+// kill switch was never enabled.
 func DisableKillSwitch() error {
-	errAllow := removeFirewallRule(killSwitchAllowRule)
-	errBlock := removeFirewallRule(killSwitchBlockRule)
-	if errBlock != nil {
-		return errBlock
+	policyErr := netsh("advfirewall", "set", "allprofiles", "firewallpolicy", "blockinbound,allowoutbound")
+	for _, name := range []string{killSwitchAllowKite, killSwitchAllowTUN, killSwitchAllowDNS, legacyKillSwitchBlock} {
+		_ = removeFirewallRule(name)
 	}
-	return errAllow
+	return policyErr
+}
+
+// KillSwitchActive reports whether kill switch rules are present, e.g.
+// left behind by a crash while connected.
+func KillSwitchActive() bool {
+	return netsh("advfirewall", "firewall", "show", "rule", "name="+killSwitchAllowKite) == nil
 }
 
 func removeFirewallRule(name string) error {
@@ -71,7 +86,7 @@ func removeFirewallRule(name string) error {
 }
 
 func netsh(args ...string) error {
-	out, err := exec.Command("netsh", args...).CombinedOutput()
+	out, err := command("netsh", args...).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%w (%s)", err, strings.TrimSpace(string(out)))
 	}

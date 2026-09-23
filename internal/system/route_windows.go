@@ -4,7 +4,6 @@ package system
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -20,7 +19,7 @@ func AddExceptionRoute(ip string) error {
 	if err != nil {
 		return fmt.Errorf("find default gateway: %w", err)
 	}
-	cmd := exec.Command("route", "add", ip, "mask", "255.255.255.255", gateway, "metric", "5")
+	cmd := command("route", "add", ip, "mask", "255.255.255.255", gateway, "metric", "5")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("route add %s via %s: %w (%s)", ip, gateway, err, strings.TrimSpace(string(out)))
 	}
@@ -29,14 +28,14 @@ func AddExceptionRoute(ip string) error {
 
 // RemoveExceptionRoute undoes AddExceptionRoute.
 func RemoveExceptionRoute(ip string) error {
-	return exec.Command("route", "delete", ip).Run()
+	return command("route", "delete", ip).Run()
 }
 
 // defaultGateway parses `route print -4` for the current IPv4 default
 // (0.0.0.0/0) gateway -- the "real" internet-facing gateway, before any
 // TUN adapter route is added.
 func defaultGateway() (string, error) {
-	out, err := exec.Command("route", "print", "-4").Output()
+	out, err := command("route", "print", "-4").Output()
 	if err != nil {
 		return "", err
 	}

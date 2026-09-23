@@ -13,15 +13,15 @@ import (
 
 // Server is one saved proxy profile, storage- and UI-agnostic.
 type Server struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Protocol string `json:"protocol"` // vmess, vless, trojan, shadowsocks
-	Address  string `json:"address"`
-	Port     int    `json:"port"`
-	UUID     string `json:"uuid,omitempty"`     // vmess/vless
-	Password string `json:"password,omitempty"` // trojan/ss
-	Method   string `json:"method,omitempty"`   // ss cipher
-	Extra    map[string]string `json:"extra,omitempty"` // network, tls, sni, path, etc.
+	ID       string            `json:"id"`
+	Name     string            `json:"name"`
+	Protocol string            `json:"protocol"` // vmess, vless, trojan, shadowsocks
+	Address  string            `json:"address"`
+	Port     int               `json:"port"`
+	UUID     string            `json:"uuid,omitempty"`     // vmess/vless
+	Password string            `json:"password,omitempty"` // trojan/ss
+	Method   string            `json:"method,omitempty"`   // ss cipher
+	Extra    map[string]string `json:"extra,omitempty"`    // network, tls, sni, path, etc.
 }
 
 // ParseLink dispatches to the right parser based on the URI scheme.
@@ -173,55 +173,68 @@ func tryBase64(s string) (string, bool) {
 	if strings.Contains(s, "://") {
 		return "", false
 	}
-	compact := strings.Join(strings.Fields(s), "")
-	for _, enc := range []*base64.Encoding{base64.StdEncoding, base64.RawStdEncoding, base64.URLEncoding, base64.RawURLEncoding} {
-		if decoded, err := enc.DecodeString(compact); err == nil {
-			return string(decoded), true
-		}
-	}
-	return "", false
+	return decodeBase64(strings.Join(strings.Fields(s), ""))
 }
 
 // vmess:// carries a base64-encoded JSON payload, not a standard URI.
 func parseVMess(link string) (Server, error) {
-	raw := strings.TrimPrefix(link, "vmess://")
-	decoded, err := base64.StdEncoding.DecodeString(raw)
-	if err != nil {
-		decoded, err = base64.RawStdEncoding.DecodeString(raw)
-		if err != nil {
-			return Server{}, fmt.Errorf("invalid vmess link: %w", err)
+	decoded, ok := decodeBase64(strings.TrimPrefix(link, "vmess://"))
+	if !ok {
+		return Server{}, fmt.Errorf("invalid vmess link: not base64")
+	}
+
+	// Generators disagree on whether numeric fields (port, aid) are JSON
+	// numbers or strings, so decode loosely and stringify everything.
+	var raw map[string]any
+	if err := json.Unmarshal([]byte(decoded), &raw); err != nil {
+		return Server{}, fmt.Errorf("invalid vmess payload: %w", err)
+	}
+	field := func(k string) string {
+		switch v := raw[k].(type) {
+		case string:
+			return strings.TrimSpace(v)
+		case float64:
+			return strconv.FormatFloat(v, 'f', -1, 64)
+		default:
+			return ""
 		}
 	}
 
-	var payload struct {
-		Ps   string `json:"ps"`
-		Add  string `json:"add"`
-		Port string `json:"port"`
-		ID   string `json:"id"`
-		Net  string `json:"net"`
-		TLS  string `json:"tls"`
-		Path string `json:"path"`
-		Host string `json:"host"`
-		SNI  string `json:"sni"`
+	extra := map[string]string{
+		"network":    field("net"),
+		"tls":        field("tls"),
+		"path":       field("path"),
+		"host":       field("host"),
+		"sni":        field("sni"),
+		"alpn":       field("alpn"),
+		"fp":         field("fp"),
+		"headerType": field("type"),
+		"scy":        field("scy"),
 	}
-	if err := json.Unmarshal(decoded, &payload); err != nil {
-		return Server{}, fmt.Errorf("invalid vmess payload: %w", err)
+	for k, v := range extra {
+		if v == "" {
+			delete(extra, k)
+		}
 	}
 
 	return Server{
-		Name:     payload.Ps,
+		Name:     field("ps"),
 		Protocol: "vmess",
-		Address:  payload.Add,
-		Port:     atoiSafe(payload.Port),
-		UUID:     payload.ID,
-		Extra: map[string]string{
-			"network": payload.Net,
-			"tls":     payload.TLS,
-			"path":    payload.Path,
-			"host":    payload.Host,
-			"sni":     payload.SNI,
-		},
+		Address:  field("add"),
+		Port:     atoiSafe(field("port")),
+		UUID:     field("id"),
+		Extra:    extra,
 	}, nil
+}
+
+func decodeBase64(s string) (string, bool) {
+	s = strings.TrimSpace(s)
+	for _, enc := range []*base64.Encoding{base64.StdEncoding, base64.RawStdEncoding, base64.URLEncoding, base64.RawURLEncoding} {
+		if decoded, err := enc.DecodeString(s); err == nil {
+			return string(decoded), true
+		}
+	}
+	return "", false
 }
 
 // vless:// and trojan:// are standard URIs: scheme://user@host:port?query#name
@@ -257,6 +270,19 @@ func parseTrojan(link string) (Server, error) {
 
 // ss:// commonly appears as ss://base64(method:password)@host:port#name
 func parseShadowsocks(link string) (Server, error) {
+	// Legacy form: ss://BASE64(method:password@host:port)#name -- no '@'
+	// before the fragment. Re-encode it into the SIP002 shape below.
+	body, fragment, _ := strings.Cut(strings.TrimPrefix(link, "ss://"), "#")
+	if !strings.Contains(body, "@") {
+		if decoded, ok := decodeBase64(body); ok && strings.Contains(decoded, "@") {
+			creds, hostport, _ := strings.Cut(decoded, "@")
+			link = "ss://" + base64.RawURLEncoding.EncodeToString([]byte(creds)) + "@" + hostport
+			if fragment != "" {
+				link += "#" + fragment
+			}
+		}
+	}
+
 	u, err := url.Parse(link)
 	if err != nil {
 		return Server{}, fmt.Errorf("invalid shadowsocks link: %w", err)
@@ -267,14 +293,9 @@ func parseShadowsocks(link string) (Server, error) {
 		password = pw
 	} else {
 		// userinfo is base64(method:password) when no ':' was present in the URL.
-		decoded, err := base64.RawURLEncoding.DecodeString(u.User.Username())
-		if err != nil {
-			decoded, err = base64.StdEncoding.DecodeString(u.User.Username())
-		}
-		if err == nil {
-			parts := strings.SplitN(string(decoded), ":", 2)
-			if len(parts) == 2 {
-				method, password = parts[0], parts[1]
+		if decoded, ok := decodeBase64(u.User.Username()); ok {
+			if m, p, found := strings.Cut(decoded, ":"); found {
+				method, password = m, p
 			}
 		}
 	}

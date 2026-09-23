@@ -3,6 +3,38 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.10.3 — Reliability pass: kill switch, proxy, subscriptions, parser, UI
+
+**Networking**
+- **Kill switch actually works now.** Windows Firewall evaluates block rules before allow
+  rules, so the old "block all outbound" rule also blocked Kite itself. It now switches the
+  default outbound policy to block and allows only Kite, the TUN adapter, and system DNS.
+- **No more lost internet after a crash.** On launch, Kite turns off a system proxy it left
+  pointing at itself and removes leftover kill-switch rules.
+- **Your own proxy is no longer switched off** when Kite quits or disconnects — it only
+  clears the proxy if it's Kite's.
+- System proxy now bypasses LAN addresses (router pages, NAS, printers), not just `<local>`.
+- **Linux/macOS:** SOCKS proxy was set to the HTTP port — now uses the SOCKS port. macOS
+  also sets the HTTPS proxy and applies to every network service, not just "Wi-Fi".
+- **xray-core + WebSocket + TLS:** forces ALPN `http/1.1` (an `h2` ALPN broke every dial).
+- No more console windows flashing up when Kite runs `netsh`/`route`.
+
+**Subscriptions & links**
+- **Syncing a subscription no longer wipes it if the fetch fails** (offline, provider down).
+- Imports write the server list once instead of once per server (much faster for big lists).
+- `vmess://` links with numeric `port`/`aid` now parse; `alpn`, `fp`, `type`, `scy` are kept.
+- Legacy `ss://BASE64#name` links now parse.
+
+**Updater**
+- No 2-minute cap on the download (slow connections failed every time); a truncated
+  download is now rejected instead of installed; the leftover `.old` exe is cleaned up.
+
+**UI**
+- Status refreshes on its own — disconnecting from the tray no longer leaves the window
+  showing "Connected".
+- Syncing a subscription keeps your selected server selected.
+- Choosing TUN switches the engine to sing-box automatically (xray-core has no TUN).
+
 ## 📊 v0.10.2 — Wire up real traffic stats for xray-core
 
 Live/total traffic in the "Show more" panel has read a stubbed 0B/s ever since the

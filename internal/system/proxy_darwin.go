@@ -5,23 +5,61 @@ package system
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
-// networkService is the default macOS interface service name; a real
-// implementation should detect the active service via `networksetup -listallnetworkservices`.
-const networkService = "Wi-Fi"
+// networkServices lists every enabled network service (Wi-Fi, Ethernet,
+// USB tethering, ...) -- the proxy is per-service on macOS, so setting it
+// on "Wi-Fi" alone leaves wired connections unproxied.
+func networkServices() ([]string, error) {
+	out, err := exec.Command("networksetup", "-listallnetworkservices").Output()
+	if err != nil {
+		return nil, err
+	}
+	var services []string
+	for i, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		// First line is an explanatory header; "*" marks disabled services.
+		if i == 0 || line == "" || strings.HasPrefix(line, "*") {
+			continue
+		}
+		services = append(services, line)
+	}
+	return services, nil
+}
 
-func SetProxy(host string, port int) error {
-	portStr := fmt.Sprintf("%d", port)
-	if err := exec.Command("networksetup", "-setwebproxy", networkService, host, portStr).Run(); err != nil {
+func SetProxy(host string, httpPort, socksPort int) error {
+	services, err := networkServices()
+	if err != nil {
 		return err
 	}
-	return exec.Command("networksetup", "-setsocksfirewallproxy", networkService, host, portStr).Run()
+	for _, svc := range services {
+		for _, args := range [][]string{
+			{"-setwebproxy", svc, host, fmt.Sprint(httpPort)},
+			{"-setsecurewebproxy", svc, host, fmt.Sprint(httpPort)},
+			{"-setsocksfirewallproxy", svc, host, fmt.Sprint(socksPort)},
+		} {
+			if err := exec.Command("networksetup", args...).Run(); err != nil {
+				return fmt.Errorf("networksetup %s %s: %w", args[0], svc, err)
+			}
+		}
+	}
+	return nil
 }
 
 func ClearProxy() error {
-	if err := exec.Command("networksetup", "-setwebproxystate", networkService, "off").Run(); err != nil {
+	services, err := networkServices()
+	if err != nil {
 		return err
 	}
-	return exec.Command("networksetup", "-setsocksfirewallproxystate", networkService, "off").Run()
+	for _, svc := range services {
+		for _, flag := range []string{"-setwebproxystate", "-setsecurewebproxystate", "-setsocksfirewallproxystate"} {
+			_ = exec.Command("networksetup", flag, svc, "off").Run()
+		}
+	}
+	return nil
+}
+
+func ClearStaleProxy(host string, port int) error {
+	return nil
 }

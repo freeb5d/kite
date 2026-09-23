@@ -14,3 +14,7 @@ func EnableKillSwitch() error {
 func DisableKillSwitch() error {
 	return nil
 }
+
+func KillSwitchActive() bool {
+	return false
+}

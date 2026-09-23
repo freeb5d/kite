@@ -46,6 +46,16 @@ func (a *App) startup(ctx context.Context) {
 	a.store = profile.NewStore()
 	a.manager = xray.NewManager()
 
+	// Nothing is connected yet, so anything below is left over from a
+	// previous run that crashed or was killed while connected -- without
+	// this the user has no internet (proxy pointing at a dead port, or all
+	// outbound traffic blocked) until they connect and disconnect again.
+	update.CleanupOldBinary()
+	_ = system.ClearStaleProxy("127.0.0.1", xray.HTTPInboundPort)
+	if system.KillSwitchActive() {
+		_ = system.DisableKillSwitch()
+	}
+
 	go tray.Start(trayIconPNG,
 		func() { // Show Kite
 			wailsruntime.WindowShow(a.ctx)
@@ -67,7 +77,7 @@ func (a *App) shutdown(ctx context.Context) {
 	if a.manager != nil {
 		a.manager.Stop()
 	}
-	_ = system.ClearProxy()
+	_ = system.ClearStaleProxy("127.0.0.1", xray.HTTPInboundPort)
 	if a.killSwitchOn {
 		_ = system.DisableKillSwitch()
 	}
@@ -115,28 +125,21 @@ func (a *App) RefreshSubscription(groupID string) ([]profile.Server, error) {
 	if subURL == "" {
 		return nil, fmt.Errorf("subscription group not found")
 	}
-
-	if err := a.DeleteSubscriptionGroup(groupID); err != nil {
-		return nil, err
-	}
+	// importSubscription only drops the group's old servers once the new
+	// list has been fetched and parsed, so a failed refresh (offline,
+	// provider down) leaves the existing servers untouched.
 	return a.importSubscription(subURL, groupID)
 }
 
 // DeleteSubscriptionGroup removes every server that was imported from
 // the same subscription (same extra.subGroup id).
 func (a *App) DeleteSubscriptionGroup(groupID string) error {
-	all, err := a.store.List()
-	if err != nil {
-		return err
-	}
-	for _, s := range all {
-		if s.Extra["subGroup"] == groupID {
-			if err := a.store.Delete(s.ID); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	_, err := a.store.ReplaceWhere(inGroup(groupID), nil)
+	return err
+}
+
+func inGroup(groupID string) func(profile.Server) bool {
+	return func(s profile.Server) bool { return s.Extra["subGroup"] == groupID }
 }
 
 func (a *App) importSubscription(subURL, groupID string) ([]profile.Server, error) {
@@ -194,30 +197,21 @@ func (a *App) importSubscription(subURL, groupID string) ([]profile.Server, erro
 		}
 	}
 
-	added := make([]profile.Server, 0, len(parsed))
-	for _, server := range parsed {
-		if server.Extra == nil {
-			server.Extra = map[string]string{}
+	for i := range parsed {
+		if parsed[i].Extra == nil {
+			parsed[i].Extra = map[string]string{}
 		}
-		server.Extra["subGroup"] = groupID
-		server.Extra["subGroupName"] = groupName
-		server.Extra["subURL"] = subURL
+		parsed[i].Extra["subGroup"] = groupID
+		parsed[i].Extra["subGroupName"] = groupName
+		parsed[i].Extra["subURL"] = subURL
 		if subMeta != "" {
-			server.Extra["subUsage"] = subMeta
+			parsed[i].Extra["subUsage"] = subMeta
 		}
 		if subNotes != "" {
-			server.Extra["subNotes"] = subNotes
+			parsed[i].Extra["subNotes"] = subNotes
 		}
-		stored, err := a.store.Add(server)
-		if err != nil {
-			continue
-		}
-		added = append(added, stored)
 	}
-	if len(added) == 0 {
-		return nil, fmt.Errorf("found %d server(s) but failed to save any", len(parsed))
-	}
-	return added, nil
+	return a.store.ReplaceWhere(inGroup(groupID), parsed)
 }
 
 func (a *App) DeleteProfile(id string) error {
@@ -277,7 +271,7 @@ func (a *App) Connect(serverID string, mode string, killSwitch bool) error {
 	}
 
 	if xrayMode == xray.ModeProxy {
-		if err := system.SetProxy("127.0.0.1", xray.HTTPInboundPort); err != nil {
+		if err := system.SetProxy("127.0.0.1", xray.HTTPInboundPort, xray.SOCKSInboundPort); err != nil {
 			_ = a.manager.Stop()
 			return err
 		}
@@ -285,7 +279,7 @@ func (a *App) Connect(serverID string, mode string, killSwitch bool) error {
 
 	if killSwitch {
 		if err := system.EnableKillSwitch(); err != nil {
-			_ = system.ClearProxy()
+			_ = system.ClearStaleProxy("127.0.0.1", xray.HTTPInboundPort)
 			_ = a.manager.Stop()
 			return fmt.Errorf("enable kill switch: %w", err)
 		}
@@ -296,7 +290,7 @@ func (a *App) Connect(serverID string, mode string, killSwitch bool) error {
 }
 
 func (a *App) Disconnect() error {
-	_ = system.ClearProxy()
+	_ = system.ClearStaleProxy("127.0.0.1", xray.HTTPInboundPort)
 	if a.killSwitchOn {
 		_ = system.DisableKillSwitch()
 		a.killSwitchOn = false
@@ -493,7 +487,7 @@ func (a *App) ApplyUpdate() error {
 	if a.manager != nil {
 		_ = a.manager.Stop()
 	}
-	_ = system.ClearProxy()
+	_ = system.ClearStaleProxy("127.0.0.1", xray.HTTPInboundPort)
 	if a.killSwitchOn {
 		_ = system.DisableKillSwitch()
 		a.killSwitchOn = false

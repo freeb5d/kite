@@ -116,7 +116,7 @@ func outboundJSON(server profile.Server) (map[string]interface{}, error) {
 				"port":    server.Port,
 				"users": []map[string]interface{}{{
 					"id":       server.UUID,
-					"security": "auto",
+					"security": firstNonEmpty(server.Extra["scy"], "auto"),
 				}},
 			}},
 		}
@@ -218,7 +218,13 @@ func tlsSettingsJSON(server profile.Server) map[string]interface{} {
 	if sni := firstNonEmpty(server.Extra["sni"], server.Extra["host"], server.Address); sni != "" {
 		tls["serverName"] = sni
 	}
-	if alpn := server.Extra["alpn"]; alpn != "" {
+	// WebSocket is an HTTP/1.1 Upgrade; offering h2 lets the server pick it
+	// and every dial then fails with `websocket: protocol "h2" was given
+	// but is not supported`.
+	network := firstNonEmpty(server.Extra["network"], server.Extra["type"])
+	if network == "ws" || network == "websocket" {
+		tls["alpn"] = []string{"http/1.1"}
+	} else if alpn := server.Extra["alpn"]; alpn != "" {
 		tls["alpn"] = strings.Split(alpn, ",")
 	}
 	if fp := server.Extra["fp"]; fp != "" {

@@ -319,6 +319,12 @@ export default function App() {
     try {
       const fresh = await RefreshSubscription(groupId)
       setServers((prev) => [...prev.filter((s) => s.extra?.subGroup !== groupId), ...fresh])
+      // Refreshed servers get new IDs; keep the same server selected.
+      if (selected?.extra?.subGroup === groupId) {
+        const match = fresh.find((s) => s.address === selected.address && s.port === selected.port && s.name === selected.name)
+          || fresh.find((s) => s.address === selected.address && s.port === selected.port)
+        setSelectedId(match ? match.id : null)
+      }
     } catch (err) {
       setError(errorText(err))
     } finally {
@@ -354,6 +360,16 @@ export default function App() {
   const isRunning = status.state === 'running'
   const isBusy = pending || status.state === 'starting'
   const needsElevation = (mode === 'tun' || killSwitch) && !elevated
+
+  // The tray menu can disconnect while the window is hidden; poll so the
+  // UI never shows a stale "Connected".
+  useEffect(() => {
+    if (pending) return
+    const id = setInterval(() => {
+      Status().then(setStatus).catch(() => {})
+    }, 2000)
+    return () => clearInterval(id)
+  }, [pending])
 
   const [trafficOpen, setTrafficOpen] = useState(false)
   const [traffic, setTraffic] = useState({ uplink: 0, downlink: 0 })
@@ -844,7 +860,11 @@ export default function App() {
                 {t('proxy')}
               </button>
               <button
-                onClick={() => setMode('tun')}
+                onClick={() => {
+                  setMode('tun')
+                  // TUN only exists in the sing-box engine.
+                  if (engine !== 'singbox') handleEngineChange('singbox')
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
                   mode === 'tun' ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'text-[var(--text-dim)] hover:text-[var(--text)]'
                 }`}

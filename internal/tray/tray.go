@@ -99,12 +99,12 @@ func pngToICO(pngData []byte) []byte {
 
 	buf.WriteByte(entryWidth)
 	buf.WriteByte(entryHeight)
-	buf.WriteByte(0) // color palette count (0 = no palette)
-	buf.WriteByte(0) // reserved
-	_ = binary.Write(&buf, binary.LittleEndian, uint16(1))              // color planes
-	_ = binary.Write(&buf, binary.LittleEndian, uint16(32))             // bits per pixel
-	_ = binary.Write(&buf, binary.LittleEndian, uint32(len(pngData)))   // image data size
-	_ = binary.Write(&buf, binary.LittleEndian, uint32(6+16))           // offset: header + one entry
+	buf.WriteByte(0)                                                  // color palette count (0 = no palette)
+	buf.WriteByte(0)                                                  // reserved
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(1))            // color planes
+	_ = binary.Write(&buf, binary.LittleEndian, uint16(32))           // bits per pixel
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(len(pngData))) // image data size
+	_ = binary.Write(&buf, binary.LittleEndian, uint32(6+16))         // offset: header + one entry
 
 	buf.Write(pngData)
 	return buf.Bytes()

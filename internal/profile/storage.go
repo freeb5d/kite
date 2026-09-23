@@ -72,6 +72,34 @@ func (s *Store) Add(server Server) (Server, error) {
 	return server, nil
 }
 
+// ReplaceWhere removes every stored server matching drop, appends added
+// (assigning IDs), and writes the file once -- so importing or refreshing
+// a subscription with hundreds of servers isn't hundreds of full rewrites.
+func (s *Store) ReplaceWhere(drop func(Server) bool, added []Server) ([]Server, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	servers, err := s.readAll()
+	if err != nil {
+		return nil, err
+	}
+	kept := servers[:0]
+	for _, srv := range servers {
+		if drop == nil || !drop(srv) {
+			kept = append(kept, srv)
+		}
+	}
+	for i := range added {
+		if added[i].ID == "" {
+			added[i].ID = uuid.NewString()
+		}
+	}
+	if err := s.writeAll(append(kept, added...)); err != nil {
+		return nil, err
+	}
+	return added, nil
+}
+
 // Update replaces the server with the same ID, preserving its position.
 func (s *Store) Update(server Server) error {
 	s.mu.Lock()

@@ -205,8 +205,23 @@ func Apply(info Info, onProgress func(Progress)) error {
 	return nil
 }
 
+// CleanupOldBinary removes the previous executable Apply renamed aside.
+// Apply can't delete it itself on Windows -- it's the image of the process
+// that's still running at that point -- so the next launch does it.
+func CleanupOldBinary() {
+	if exePath, err := os.Executable(); err == nil {
+		_ = os.Remove(exePath + ".old")
+	}
+}
+
 func download(url, dest string, onProgress func(Progress)) error {
-	client := &http.Client{Timeout: 2 * time.Minute}
+	// No overall timeout: the binary is tens of MB and a slow link can
+	// legitimately take many minutes. Only a stalled connection should fail.
+	client := &http.Client{Transport: &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		ResponseHeaderTimeout: 30 * time.Second,
+		IdleConnTimeout:       60 * time.Second,
+	}}
 	resp, err := client.Get(url)
 	if err != nil {
 		return err
@@ -227,8 +242,14 @@ func download(url, dest string, onProgress func(Progress)) error {
 		reader = &progressReader{r: resp.Body, total: resp.ContentLength, onProgress: onProgress}
 	}
 
-	_, err = io.Copy(out, reader)
-	return err
+	written, err := io.Copy(out, reader)
+	if err != nil {
+		return err
+	}
+	if resp.ContentLength > 0 && written != resp.ContentLength {
+		return fmt.Errorf("download incomplete: got %d of %d bytes", written, resp.ContentLength)
+	}
+	return out.Close()
 }
 
 // progressReader calls onProgress after each underlying Read, throttled so

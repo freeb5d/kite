@@ -150,7 +150,7 @@ func outboundJSON(server profile.Server) (map[string]interface{}, error) {
 	case "vmess":
 		base["type"] = "vmess"
 		base["uuid"] = server.UUID
-		base["security"] = "auto"
+		base["security"] = firstNonEmpty(server.Extra["scy"], "auto")
 	case "vless":
 		base["type"] = "vless"
 		base["uuid"] = server.UUID

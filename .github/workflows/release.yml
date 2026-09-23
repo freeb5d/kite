@@ -56,6 +56,9 @@ jobs:
       - name: Resolve Go dependencies
         run: go mod tidy
 
+      - name: Run tests
+        run: go test ./internal/profile/...
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm install

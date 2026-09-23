@@ -72,9 +72,9 @@ const (
 // CurrentEngine/SetEngine). Only one of singbox/xrayCore is non-nil at a
 // time.
 type Manager struct {
-	mu      sync.Mutex
-	engine  Engine
-	singbox *singbox.Manager
+	mu       sync.Mutex
+	engine   Engine
+	singbox  *singbox.Manager
 	xrayCore *xraycore.Manager
 }
 
