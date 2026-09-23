@@ -3,6 +3,16 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.10.4 — Fix TUN mode never connecting (DNS loop)
+
+In TUN mode sing-box couldn't resolve the server's own hostname: its DNS lookups were
+routed back into the TUN adapter it was feeding and timed out, so every connection failed
+with `lookup ...: context deadline exceeded`. The TUN config now sets
+`route.auto_detect_interface` (sing-box binds its own sockets to the real network
+interface), resolves the server hostname with the system resolver, and hijacks apps' DNS
+queries to answer them over the tunnel (1.1.1.1 via the proxy) so they aren't poisoned or
+leaked locally.
+
 ## 🐛 v0.10.3 — Reliability pass: kill switch, proxy, subscriptions, parser, UI
 
 **Networking**

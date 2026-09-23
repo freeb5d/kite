@@ -133,6 +133,32 @@ func buildJSON(server profile.Server, mode Mode) ([]byte, error) {
 		},
 	}
 
+	if mode == ModeTUN {
+		// auto_detect_interface binds sing-box's own sockets (outbound
+		// dials, DNS lookups) to the physical interface; without it, with
+		// auto_route on, looking up the server's own hostname went back
+		// into the TUN adapter and timed out, so nothing ever connected.
+		// The server hostname is resolved by the system resolver ("local");
+		// apps' DNS is hijacked and answered over the tunnel ("remote") so
+		// it isn't poisoned or leaked by the local network.
+		config["dns"] = map[string]interface{}{
+			"servers": []map[string]interface{}{
+				{"type": "tcp", "tag": "remote", "server": "1.1.1.1", "detour": "proxy"},
+				{"type": "local", "tag": "local"},
+			},
+			"final": "remote",
+		}
+		config["route"] = map[string]interface{}{
+			"auto_detect_interface":   true,
+			"default_domain_resolver": map[string]interface{}{"server": "local"},
+			"rules": []map[string]interface{}{
+				{"action": "sniff"},
+				{"protocol": "dns", "action": "hijack-dns"},
+			},
+			"final": "proxy",
+		}
+	}
+
 	return json.Marshal(config)
 }
 
