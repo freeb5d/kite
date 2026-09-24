@@ -4,7 +4,7 @@
   # Kite
 
   **Çapraz platform bir masaüstü V2Ray/proxy istemcisi.**
-  Wails + Go arka uç, React/Tailwind ön uç, Go kütüphaneleri olarak gömülü xray-core/sing-box.
+  Wails + Go arka uç, React/Tailwind ön uç, Go kütüphanesi olarak gömülü xray-core.
 
   [![Release](https://img.shields.io/github/v/release/freeb5d/kite?label=release&color=6366f1)](https://github.com/freeb5d/kite/releases/latest)
   [![Build](https://img.shields.io/github/actions/workflow/status/freeb5d/kite/release.yml?label=build)](https://github.com/freeb5d/kite/actions/workflows/release.yml)
@@ -40,14 +40,14 @@ Her platform tek bir taşınabilir yürütülebilir dosya olarak sunulur — kur
 
 - **Bağlantı biçimleri**: `vmess://`, `vless://`, `trojan://`, `ss://` — bir paylaşım bağlantısı yapıştırın, ayrıştırılıp kaydedilsin
 - **Abonelik URL'leri** — bir `http(s)://` abonelik bağlantısı yapıştırın (V2RayN/V2RayNG/Shadowrocket'ın kullandığı base64 bağlantı listesi biçimi) ve içerdiği tüm sunucular tek seferde içe aktarılır, listede tek bir daraltılabilir grupta toplanır (bir abonelik yüzlerce sunucu içerebilir). Sağlayıcı bunu bildirdiğinde (`Subscription-Userinfo` başlığı üzerinden veya bazı sağlayıcıların bağlantı listesine karıştırdığı sahte "info" girdileri üzerinden) grup, plan/trafik/son kullanma bilgisini gösterir ve sunucularını yeniden çekip yenilemek için kendi senkronizasyon düğmesine sahiptir
-- **İki seçilebilir motor**, ikisi de Go kütüphanesi olarak gömülü (dışarıya çağrılan ikili dosyalar değil) — tam yaşam döngüsü kontrolü, istatistikler için stdout ayrıştırmaya gerek yok. **xray-core** varsayılandır (daha geniş taşıma desteği, özellikle `headerType=http` gizlemeli `tcp`); **sing-box** ise TUN modu olan tek motordur. Hakkında panelinden istediğiniz zaman değiştirin (önce bağlantıyı kesin)
+- **xray-core**, Go kütüphanesi olarak gömülü (dışarıya çağrılan bir ikili dosya değil) — tam yaşam döngüsü kontrolü ve gerçek trafik istatistikleri, stdout ayrıştırmaya gerek yok
 - **Taşıma yöntemleri**: TCP (xray-core'un `headerType=http` gizlemesi dahil), WebSocket ve gRPC; TLS/REALITY güvenliği doğrudan bağlantıdan algılanır
 - **Sistem proxy entegrasyonu** — Bağlan/Bağlantıyı Kes, işletim sistemi HTTP proxy'sini otomatik olarak değiştirir (Windows'ta kullanıcı bazlı kayıt defteri, yükseltme gerekmez)
-- **TUN modu (Windows, yalnızca sing-box)** — sadece proxy ayarına uyan uygulamalar yerine, tüm sistem trafiğini sanal bir ağ adaptörü (dahili WinTun) üzerinden yönlendirir. Yönetici izni ve sing-box motorunun seçili olmasını gerektirir; Kite kendini tek tıkla yükseltilmiş olarak yeniden başlatabilir
+- **TUN modu (Windows)** — sadece proxy ayarına uyan uygulamalar yerine tüm sistem trafiğini sanal bir ağ adaptörü (xray-core'un TUN'u ve dahili WinTun sürücüsü) üzerinden yönlendirir. `headerType=http` dahil her sunucu türüyle çalışır; DNS de tünelden geçer. Yönetici izni gerektirir; Kite kendini tek tıkla yükseltilmiş olarak yeniden başlatabilir
 - **Kill switch (Windows)** — bağlıyken, bir Windows Güvenlik Duvarı kural çifti aracılığıyla Kite'ın kendisi dışındaki tüm giden trafiği engeller; böylece sistem proxy'sini yok sayan bir uygulama (veya çöken bir motor süreci) trafiği tünelin dışına sızdıramaz. TUN modu ile aynı yönetici gereksinimi
 - **Sistem tepsisi** — pencereyi kapatmak, çıkmak yerine onu tepsiye gizler, böylece etkin bir bağlantı çalışmaya devam eder; tepsi menüsünde Kite'ı Göster, Bağlantıyı Kes ve Kite'tan Çık bulunur
-- **Yerleşik tanılama** — Test düğmesi tünel üzerinden gerçek bir istek yapar ve gerçek sonucu bildirir; bir günlük görüntüleyici etkin motorun kendi hata ayıklama günlüğünü satır içinde gösterir
-- **Kendini güncelleme** — başlangıçta GitHub Releases'i kontrol eder, tek tıkla indirir, değiştirir ve yeniden başlatır (Hakkında paneli Kite'ın sürümünü, etkin motoru ve onun sürümünü gösterir)
+- **Yerleşik tanılama** — Test düğmesi tünel üzerinden gerçek bir istek yapar ve gerçek sonucu bildirir; bir günlük görüntüleyici xray-core'un kendi hata ayıklama günlüğünü satır içinde gösterir
+- **Kendini güncelleme** — başlangıçta GitHub Releases'i kontrol eder, tek tıkla indirir, değiştirir ve yeniden başlatır (Hakkında paneli Kite'ın ve gömülü xray-core'un sürümünü gösterir)
 - **Koyu / açık temalar**, aranabilir sunucu listesi, satır içi yeniden adlandırma ve tek tıkla kaldırma ile birlikte
 - **8 dil**, kenar çubuğundan değiştirilebilir (Farsça dahili Vazirmatn yazı tipini kullanır):
   - 🇬🇧 English (varsayılan)
@@ -92,25 +92,11 @@ kite/
 ├── main.go / app.go        Wails entrypoint + the App struct (Go methods
 │                            exposed to the frontend via the JS bridge)
 ├── internal/
-│   ├── xray/                 Engine facade (package/dir keeps the historical
-│   │   │                      name from when it *was* the xray-core wrapper
-│   │   │                      -- see CHANGELOG). Dispatches Start/Stop/
-│   │   │                      Status/Traffic to whichever concrete engine
-│   │   │                      below is currently selected (settings.json),
-│   │   │                      so app.go doesn't know which one is active.
-│   │   └── facade.go
-│   ├── engine/
-│   │   ├── xraycore/          xray-core lifecycle (the default engine) --
-│   │   │                      manager.go builds a core.Instance via
-│   │   │                      serial.LoadJSONConfig + core.New; config.go
-│   │   │                      builds the JSON from a server profile
-│   │   └── singbox/           sing-box lifecycle (the only engine with TUN
-│   │       ├── manager.go     support) -- Start/Stop/Restart a real box.Box
-│   │       ├── config.go      Server profile -> sing-box JSON config,
-│   │       │                  decoded via sing-box's own registry-aware
-│   │       │                  JSON decoder (see include.Context)
-│   │       ├── stats.go       Traffic counters (stub, see below)
-│   │       └── tun_windows.go Writes the embedded wintun.dll next to the
+│   ├── xray/                 xray-core lifecycle
+│   │   ├── manager.go         Start/Stop a core.Instance (proxy or TUN mode),
+│   │   │                      traffic counters from xray's stats.Manager
+│   │   ├── config.go          Server profile -> xray-core JSON config
+│   │   └── tun_windows.go     Writes the embedded wintun.dll next to the
 │   │                          exe (TUN mode needs it alongside the binary)
 │   ├── profile/              vmess/vless/trojan/ss link parsing +
 │   │                         JSON-file server storage
@@ -137,10 +123,8 @@ kite/
 
 ## Bilinen eksikler / sıradaki adımlar
 
-- **TUN modu yalnızca sing-box motoruyla çalışır** — xray-core (varsayılan) burada TUN girişine sahip değildir; xray-core seçiliyken TUN moduna geçmeye çalışmak, önce Hakkında panelinden motoru değiştirmenizi söyleyen açık bir hatayla başarısız olur.
-- **Her iki motorda da canlı trafik istatistikleri sahte (stub)** — "Daha fazla göster" panelindeki rakamlar her zaman 0B/s gösterir. xray-core'un stats.Manager'ı ve sing-box'ın (`experimental.clash_api`/`v2ray_api` üzerinden) `trafficcontrol.Manager`'ı, henüz yapılmamış ekstra bağlantılara ihtiyaç duyuyor — her iki motor için de bir sonraki adım.
 - **macOS yalnızca Apple Silicon (arm64)** — Intel derlemesi yok. Gerekirse `.github/workflows/release.yml` içine `darwin/arm64` ile birlikte bir `darwin/amd64` matris girdisi ekleyin.
-- **TUN modu şimdilik yalnızca Windows'ta** ve yalnızca IPv4 için çalışır — motorun kendi üst akış bağlantısının beslediği TUN adaptörü üzerinden döngüye girmesini engelleyen istisna yolu (`internal/system/route_windows.go`) yalnızca çözümlenmiş IPv4 adreslerini kapsar; yalnızca IPv6 üzerinden erişilebilen bir sunucu TUN modunda henüz çalışmaz. Linux/macOS TUN desteği mümkündür (sing-box'ın kendi `tun` paketi zaten ikisini de destekler) ama burada bağlanmamıştır.
+- **TUN modu şimdilik yalnızca Windows'ta** ve yalnızca IPv4 için çalışır — motorun kendi üst akış bağlantısının beslediği TUN adaptörü üzerinden döngüye girmesini engelleyen istisna yolu (`internal/system/route_windows.go`) yalnızca çözümlenmiş IPv4 adreslerini kapsar; yalnızca IPv6 üzerinden erişilebilen bir sunucu TUN modunda henüz çalışmaz. Linux/macOS TUN desteği mümkündür (xray-core'ın kendi `tun` paketi zaten ikisini de destekler) ama burada bağlanmamıştır.
 - **Linux sistem proxy'si yalnızca GNOME'u kapsar** (`gsettings`) — diğer masaüstü ortamlarının `internal/system/proxy_linux.go` içinde kendi arka uçlarına ihtiyacı vardır.
 - **Kill switch yalnızca Windows'ta** — `netsh advfirewall` kuralları aracılığıyla uygulanır (`internal/system/killswitch_windows.go`); Linux/macOS kendi arka uçlarına (`iptables`/`pfctl`) ihtiyaç duyar ve şimdilik uygulanmamıştır (bu platformlarda anahtar gizlidir, TUN modu gibi).
 - **Yerel simge durumuna küçültme düğmesi hâlâ yalnızca görev çubuğuna küçültüyor** — Wails v2, işletim sistemi düzeyinde bir simge durumuna küçültme olayı için kanca sunmuyor, yalnızca pencere kapatma (`OnBeforeClose`, tepsi özelliğinin kullandığı) sunuyor. Yalnızca pencereyi kapatmak onu tepsiye gizler.

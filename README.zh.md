@@ -4,7 +4,7 @@
   # Kite
 
   **跨平台桌面版 V2Ray / 代理客户端。**
-  Wails + Go 后端，React/Tailwind 前端，xray-core/sing-box 作为 Go 库嵌入。
+  Wails + Go 后端，React/Tailwind 前端，xray-core 作为 Go 库嵌入。
 
   [![Release](https://img.shields.io/github/v/release/freeb5d/kite?label=release&color=6366f1)](https://github.com/freeb5d/kite/releases/latest)
   [![Build](https://img.shields.io/github/actions/workflow/status/freeb5d/kite/release.yml?label=build)](https://github.com/freeb5d/kite/actions/workflows/release.yml)
@@ -40,14 +40,14 @@
 
 - **链接格式**：`vmess://`、`vless://`、`trojan://`、`ss://` —— 粘贴分享链接即可解析并保存
 - **订阅链接** —— 粘贴一个 `http(s)://` 订阅链接（V2RayN/V2RayNG/Shadowrocket 使用的 base64 链接列表格式），其中包含的所有服务器都会一次性导入，并折叠成列表中的一个可展开分组（一个订阅可能包含数百个服务器）。当服务商通过 `Subscription-Userinfo` 响应头或混在链接列表中的伪造“info”条目报告套餐/流量/到期信息时，该分组会显示这些信息，并自带一个同步按钮用于重新获取和刷新其服务器列表
-- **两种可切换的引擎**，均作为 Go 库嵌入（而非外部调用的二进制文件）——完整的生命周期控制，无需解析标准输出来获取统计信息。**xray-core** 是默认引擎（支持更广泛的传输方式，尤其是带 `headerType=http` 伪装的 `tcp`）；**sing-box** 是唯一支持 TUN 模式的引擎。可随时在“关于”面板中切换（需先断开连接）
+- **xray-core**，作为 Go 库嵌入（而非外部调用的二进制文件）——完整的生命周期控制和真实的流量统计，无需解析标准输出
 - **传输方式**：TCP（包括 xray-core 的 `headerType=http` 伪装）、WebSocket 和 gRPC，并直接从链接中检测 TLS/REALITY 安全设置
 - **系统代理集成** —— 连接/断开会自动切换操作系统的 HTTP 代理（Windows 上使用每用户注册表项，无需提升权限）
-- **TUN 模式（仅限 Windows，仅 sing-box）** —— 将所有系统流量通过虚拟网络适配器（内置 WinTun）路由，而不仅仅是遵循代理设置的应用。需要管理员权限并选择 sing-box 引擎；Kite 可以一键以提升权限的方式重启自身
+- **TUN 模式（Windows）** —— 通过虚拟网络适配器（xray-core 的 TUN，配合内置的 WinTun 驱动）路由所有系统流量，而不仅仅是遵循代理设置的应用。支持所有服务器类型，包括 `headerType=http`，DNS 也经由隧道。需要管理员权限；Kite 可以一键以提升权限的方式重启自身
 - **Kill Switch（仅限 Windows）** —— 连接期间通过一对 Windows 防火墙规则阻止除 Kite 自身外的所有出站流量，这样即使某个应用忽略系统代理（或引擎进程崩溃），也无法在隧道之外泄漏流量。与 TUN 模式有相同的管理员权限要求
 - **系统托盘** —— 关闭窗口会将其隐藏到托盘而不是退出程序，因此活动连接会继续保持；托盘菜单包含“显示 Kite”、“断开连接”和“退出 Kite”
-- **内置诊断** —— “测试”按钮会通过隧道发起一次真实请求并报告实际结果；日志查看器可内联显示当前引擎自身的调试日志
-- **自我更新** —— 启动时检查 GitHub Releases，一键下载、替换并重启（“关于”面板显示 Kite 版本、当前引擎及其版本）
+- **内置诊断** —— “测试”按钮会通过隧道发起一次真实请求并报告实际结果；日志查看器可内联显示 xray-core 自身的调试日志
+- **自我更新** —— 启动时检查 GitHub Releases，一键下载、替换并重启（“关于”面板显示 Kite 和内置 xray-core 的版本）
 - **深色/浅色主题**，配有可搜索的服务器列表、内联重命名和一键移除
 - **8 种语言**，可在侧边栏切换（波斯语使用内置的 Vazirmatn 字体）：
   - 🇬🇧 English（默认）
@@ -92,25 +92,11 @@ kite/
 ├── main.go / app.go        Wails entrypoint + the App struct (Go methods
 │                            exposed to the frontend via the JS bridge)
 ├── internal/
-│   ├── xray/                 Engine facade (package/dir keeps the historical
-│   │   │                      name from when it *was* the xray-core wrapper
-│   │   │                      -- see CHANGELOG). Dispatches Start/Stop/
-│   │   │                      Status/Traffic to whichever concrete engine
-│   │   │                      below is currently selected (settings.json),
-│   │   │                      so app.go doesn't know which one is active.
-│   │   └── facade.go
-│   ├── engine/
-│   │   ├── xraycore/          xray-core lifecycle (the default engine) --
-│   │   │                      manager.go builds a core.Instance via
-│   │   │                      serial.LoadJSONConfig + core.New; config.go
-│   │   │                      builds the JSON from a server profile
-│   │   └── singbox/           sing-box lifecycle (the only engine with TUN
-│   │       ├── manager.go     support) -- Start/Stop/Restart a real box.Box
-│   │       ├── config.go      Server profile -> sing-box JSON config,
-│   │       │                  decoded via sing-box's own registry-aware
-│   │       │                  JSON decoder (see include.Context)
-│   │       ├── stats.go       Traffic counters (stub, see below)
-│   │       └── tun_windows.go Writes the embedded wintun.dll next to the
+│   ├── xray/                 xray-core lifecycle
+│   │   ├── manager.go         Start/Stop a core.Instance (proxy or TUN mode),
+│   │   │                      traffic counters from xray's stats.Manager
+│   │   ├── config.go          Server profile -> xray-core JSON config
+│   │   └── tun_windows.go     Writes the embedded wintun.dll next to the
 │   │                          exe (TUN mode needs it alongside the binary)
 │   ├── profile/              vmess/vless/trojan/ss link parsing +
 │   │                         JSON-file server storage
@@ -137,10 +123,8 @@ kite/
 
 ## 已知限制 / 后续计划
 
-- **TUN 模式仅在 sing-box 引擎下可用** —— 默认引擎 xray-core 在此没有 TUN 入站；在选择 xray-core 时切换到 TUN 模式会失败，并明确提示先在“关于”面板中切换引擎。
-- **两种引擎的实时流量统计都是占位实现** —— “显示更多”面板的数字始终显示 0B/s。xray-core 的 stats.Manager 和 sing-box 的 `trafficcontrol.Manager`（通过 `experimental.clash_api`/`v2ray_api`）都还需要额外的接入工作——这是两种引擎共同的后续事项。
 - **macOS 仅支持 Apple Silicon（arm64）** —— 没有 Intel 构建版本。如有需要，可在 `.github/workflows/release.yml` 中添加与 `darwin/arm64` 并列的 `darwin/amd64` 矩阵项。
-- **TUN 模式目前仅限 Windows** 且仅支持 IPv4 —— 用于防止引擎自身上游连接循环回 TUN 适配器的例外路由（`internal/system/route_windows.go`）目前只覆盖已解析的 IPv4 地址；只能通过 IPv6 访问的服务器暂时无法在 TUN 模式下使用。Linux/macOS 的 TUN 支持是可行的（sing-box 自带的 `tun` 包已支持两者），只是尚未接入。
+- **TUN 模式目前仅限 Windows** 且仅支持 IPv4 —— 用于防止引擎自身上游连接循环回 TUN 适配器的例外路由（`internal/system/route_windows.go`）目前只覆盖已解析的 IPv4 地址；只能通过 IPv6 访问的服务器暂时无法在 TUN 模式下使用。Linux/macOS 的 TUN 支持是可行的（xray-core 自带的 `tun` 包已支持两者），只是尚未接入。
 - **Linux 系统代理仅支持 GNOME**（`gsettings`）—— 其他桌面环境需要在 `internal/system/proxy_linux.go` 中实现各自的后端。
 - **Kill Switch 仅限 Windows** —— 通过 `netsh advfirewall` 规则实现（`internal/system/killswitch_windows.go`）；Linux/macOS 需要各自的后端（`iptables`/`pfctl`），目前尚未实现（该开关在这些平台上被隐藏，与 TUN 模式相同）。
 - **原生最小化按钮仍然只是最小化到任务栏** —— Wails v2 没有提供操作系统级最小化事件的钩子，只有窗口关闭事件（`OnBeforeClose`，托盘功能使用的就是它）。只有关闭窗口才会隐藏到托盘。

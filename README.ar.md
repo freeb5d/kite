@@ -4,7 +4,7 @@
   # Kite
 
   **عميل سطح مكتب متعدد المنصات لبروتوكول V2Ray / بروكسي.**
-  خلفية Wails + Go، واجهة أمامية React/Tailwind، مع تضمين xray-core/sing-box كمكتبات Go.
+  خلفية Wails + Go، واجهة أمامية React/Tailwind، مع تضمين xray-core كمكتبة Go.
 
   [![Release](https://img.shields.io/github/v/release/freeb5d/kite?label=release&color=6366f1)](https://github.com/freeb5d/kite/releases/latest)
   [![Build](https://img.shields.io/github/actions/workflow/status/freeb5d/kite/release.yml?label=build)](https://github.com/freeb5d/kite/actions/workflows/release.yml)
@@ -40,14 +40,14 @@
 
 - **صيغ الروابط**: `vmess://`، `vless://`، `trojan://`، `ss://` — الصق رابط مشاركة ليتم تحليله وحفظه
 - **روابط الاشتراك** — الصق رابط اشتراك `http(s)://` (صيغة قائمة الروابط بترميز base64 التي تستخدمها V2RayN/V2RayNG/Shadowrocket) ليتم استيراد جميع الخوادم التي يحتويها دفعة واحدة، مجمّعة في مجموعة واحدة قابلة للطي في القائمة (يمكن أن يحتوي الاشتراك على مئات الخوادم). تعرض المجموعة معلومات الخطة/حجم البيانات/تاريخ الانتهاء عندما يبلغ عنها المزوّد (عبر ترويسة `Subscription-Userinfo`، أو إدخالات "info" الوهمية التي يضيفها بعض المزوّدين ضمن قائمة الروابط)، ولديها زر مزامنة خاص بها لإعادة الجلب وتحديث خوادمها
-- **محركان قابلان للاختيار**، كلاهما مُضمَّن كمكتبة Go (وليس ملفًا ثنائيًا منفصلًا) — تحكّم كامل بدورة الحياة، دون الحاجة لتحليل المخرجات القياسية للحصول على الإحصاءات. **xray-core** هو الافتراضي (دعم أوسع لطرق النقل، خصوصًا `tcp` مع تمويه `headerType=http`)؛ و**sing-box** هو المحرك الوحيد الذي يدعم وضع TUN. يمكن التبديل بينهما في أي وقت من لوحة "حول" (بعد قطع الاتصال أولًا)
+- **xray-core**، مُضمَّن كمكتبة Go (وليس ملفًا ثنائيًا منفصلًا) — تحكّم كامل بدورة الحياة وإحصاءات حركة مرور حقيقية، دون تحليل المخرجات
 - **طرق النقل**: TCP (بما في ذلك تمويه `headerType=http` الخاص بـ xray-core)، وWebSocket، وgRPC، مع اكتشاف أمان TLS/REALITY مباشرة من الرابط
 - **تكامل بروكسي النظام** — يقوم الاتصال/قطع الاتصال بتبديل بروكسي HTTP الخاص بنظام التشغيل تلقائيًا (سجل خاص بكل مستخدم على ويندوز، دون الحاجة لصلاحيات مرتفعة)
-- **وضع TUN (ويندوز فقط، sing-box فقط)** — يوجّه كل حركة مرور النظام عبر محول شبكة افتراضي (WinTun، مضمّن)، بدلًا من التطبيقات التي تحترم إعداد البروكسي فقط. يتطلب صلاحيات المسؤول واختيار محرك sing-box؛ يمكن لـ Kite إعادة تشغيل نفسه بصلاحيات مرتفعة بنقرة واحدة
+- **وضع TUN (ويندوز)** — يوجّه كل حركة مرور النظام عبر محول شبكة افتراضي (TUN الخاص بـ xray-core مع برنامج تشغيل WinTun المضمّن)، بدلًا من التطبيقات التي تحترم إعداد البروكسي فقط. يعمل مع جميع أنواع الخوادم بما فيها `headerType=http`، ويمر DNS عبر النفق أيضًا. يتطلب صلاحيات المسؤول؛ يمكن لـ Kite إعادة تشغيل نفسه بصلاحيات مرتفعة بنقرة واحدة
 - **مفتاح الإيقاف (Kill switch) (ويندوز فقط)** — يحظر كل حركة المرور الصادرة باستثناء حركة مرور Kite نفسها أثناء الاتصال، عبر زوج من قواعد جدار حماية ويندوز، بحيث لا يستطيع تطبيق يتجاهل بروكسي النظام (أو عملية محرك متعطلة) تسريب حركة المرور خارج النفق. نفس متطلبات صلاحيات المسؤول كوضع TUN
 - **أيقونة النظام** — إغلاق النافذة يخفيها إلى شريط النظام بدلًا من الخروج، بحيث يستمر أي اتصال نشط بالعمل؛ تحتوي قائمة الأيقونة على إظهار Kite وقطع الاتصال والخروج من Kite
-- **تشخيص مدمج** — زر الاختبار يقوم بطلب حقيقي عبر النفق ويبلغ عن النتيجة الفعلية؛ عارض السجلات يعرض سجل التصحيح الخاص بالمحرك النشط مباشرة داخل التطبيق
-- **تحديث ذاتي** — يتحقق من GitHub Releases عند الإقلاع، وبنقرة واحدة يقوم بالتنزيل والاستبدال وإعادة التشغيل (تعرض لوحة "حول" إصدار Kite والمحرك النشط وإصداره)
+- **تشخيص مدمج** — زر الاختبار يقوم بطلب حقيقي عبر النفق ويبلغ عن النتيجة الفعلية؛ عارض السجلات يعرض سجل التصحيح الخاص بـ xray-core مباشرة داخل التطبيق
+- **تحديث ذاتي** — يتحقق من GitHub Releases عند الإقلاع، وبنقرة واحدة يقوم بالتنزيل والاستبدال وإعادة التشغيل (تعرض لوحة "حول" إصدار Kite وإصدار xray-core المضمّن)
 - **سمات داكنة / فاتحة**، مع قائمة خوادم قابلة للبحث، وإعادة تسمية مباشرة، وإزالة بنقرة واحدة
 - **8 لغات**، يمكن تبديلها من الشريط الجانبي (الفارسية تستخدم خط Vazirmatn المضمّن):
   - 🇬🇧 English (الافتراضية)
@@ -92,25 +92,11 @@ kite/
 ├── main.go / app.go        Wails entrypoint + the App struct (Go methods
 │                            exposed to the frontend via the JS bridge)
 ├── internal/
-│   ├── xray/                 Engine facade (package/dir keeps the historical
-│   │   │                      name from when it *was* the xray-core wrapper
-│   │   │                      -- see CHANGELOG). Dispatches Start/Stop/
-│   │   │                      Status/Traffic to whichever concrete engine
-│   │   │                      below is currently selected (settings.json),
-│   │   │                      so app.go doesn't know which one is active.
-│   │   └── facade.go
-│   ├── engine/
-│   │   ├── xraycore/          xray-core lifecycle (the default engine) --
-│   │   │                      manager.go builds a core.Instance via
-│   │   │                      serial.LoadJSONConfig + core.New; config.go
-│   │   │                      builds the JSON from a server profile
-│   │   └── singbox/           sing-box lifecycle (the only engine with TUN
-│   │       ├── manager.go     support) -- Start/Stop/Restart a real box.Box
-│   │       ├── config.go      Server profile -> sing-box JSON config,
-│   │       │                  decoded via sing-box's own registry-aware
-│   │       │                  JSON decoder (see include.Context)
-│   │       ├── stats.go       Traffic counters (stub, see below)
-│   │       └── tun_windows.go Writes the embedded wintun.dll next to the
+│   ├── xray/                 xray-core lifecycle
+│   │   ├── manager.go         Start/Stop a core.Instance (proxy or TUN mode),
+│   │   │                      traffic counters from xray's stats.Manager
+│   │   ├── config.go          Server profile -> xray-core JSON config
+│   │   └── tun_windows.go     Writes the embedded wintun.dll next to the
 │   │                          exe (TUN mode needs it alongside the binary)
 │   ├── profile/              vmess/vless/trojan/ss link parsing +
 │   │                         JSON-file server storage
@@ -137,10 +123,8 @@ kite/
 
 ## الفجوات المعروفة / الخطوات التالية
 
-- **وضع TUN يعمل فقط مع محرك sing-box** — لا يملك xray-core (الافتراضي) مدخل TUN هنا؛ التبديل إلى وضع TUN أثناء اختيار xray-core يفشل مع رسالة خطأ واضحة تطلب منك تبديل المحرك أولًا من لوحة "حول".
-- **إحصاءات حركة المرور المباشرة عبارة عن نموذج وهمي في كلا المحركين** — أرقام لوحة "عرض المزيد" تبقى دائمًا 0B/s. يحتاج كل من stats.Manager الخاص بـ xray-core و`trafficcontrol.Manager` الخاص بـ sing-box (عبر `experimental.clash_api`/`v2ray_api`) إلى ربط إضافي لم يُنجز بعد — خطوة تالية لكلا المحركين.
 - **macOS يدعم فقط Apple Silicon (arm64)** — لا يوجد بناء لمعالجات Intel. إذا لزم الأمر، أضف إدخال مصفوفة `darwin/amd64` بجانب `darwin/arm64` في `.github/workflows/release.yml`.
-- **وضع TUN حاليًا لويندوز فقط** ويدعم IPv4 فقط في الوقت الحالي — مسار الاستثناء الذي يمنع اتصال المحرك الصاعد الخاص به من الدوران عبر محول TUN (`internal/system/route_windows.go`) يغطي فقط عناوين IPv4 التي تم حلها؛ خادم لا يمكن الوصول إليه إلا عبر IPv6 لن يعمل في وضع TUN بعد. دعم TUN على Linux/macOS ممكن (حزمة `tun` الخاصة بـ sing-box تدعم كليهما بالفعل) لكنه غير مفعّل هنا بعد.
+- **وضع TUN حاليًا لويندوز فقط** ويدعم IPv4 فقط في الوقت الحالي — مسار الاستثناء الذي يمنع اتصال المحرك الصاعد الخاص به من الدوران عبر محول TUN (`internal/system/route_windows.go`) يغطي فقط عناوين IPv4 التي تم حلها؛ خادم لا يمكن الوصول إليه إلا عبر IPv6 لن يعمل في وضع TUN بعد. دعم TUN على Linux/macOS ممكن (حزمة `tun` الخاصة بـ xray-core تدعم كليهما بالفعل) لكنه غير مفعّل هنا بعد.
 - **بروكسي نظام Linux يغطي GNOME فقط** (`gsettings`) — بيئات سطح المكتب الأخرى تحتاج إلى تطبيق خلفية خاصة بها في `internal/system/proxy_linux.go`.
 - **مفتاح الإيقاف لويندوز فقط** — تم تنفيذه عبر قواعد `netsh advfirewall` (`internal/system/killswitch_windows.go`)؛ تحتاج Linux/macOS إلى تطبيق خلفية خاصة بها (`iptables`/`pfctl`) وهي غير مُنفَّذة حاليًا (يُخفى المفتاح في هذه الأنظمة، مثل وضع TUN).
 - **زر التصغير الأصلي لا يزال يقوم فقط بالتصغير إلى شريط المهام** — لا يوفر Wails v2 خطافًا لحدث التصغير على مستوى نظام التشغيل، فقط إغلاق النافذة (`OnBeforeClose`، الذي تستخدمه ميزة أيقونة النظام). إغلاق النافذة فقط هو ما يخفيها إلى شريط النظام.

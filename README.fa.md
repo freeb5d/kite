@@ -4,7 +4,7 @@
   # Kite
 
   **یک کلاینت دسکتاپ چندسکویی برای V2Ray / پروکسی.**
-  بک‌اند Wails + Go، فرانت‌اند React/Tailwind، با xray-core/sing-box به‌صورت کتابخانه‌ی Go تعبیه‌شده.
+  بک‌اند Wails + Go، فرانت‌اند React/Tailwind، با xray-core به‌صورت کتابخانه‌ی Go تعبیه‌شده.
 
   [![Release](https://img.shields.io/github/v/release/freeb5d/kite?label=release&color=6366f1)](https://github.com/freeb5d/kite/releases/latest)
   [![Build](https://img.shields.io/github/actions/workflow/status/freeb5d/kite/release.yml?label=build)](https://github.com/freeb5d/kite/actions/workflows/release.yml)
@@ -40,14 +40,14 @@
 
 - **فرمت لینک‌ها**: `vmess://`، `vless://`، `trojan://`، `ss://` — لینک اشتراک‌گذاری را جای‌گذاری کنید تا تجزیه و ذخیره شود
 - **لینک‌های اشتراک (Subscription)** — یک لینک اشتراک `http(s)://` (همان فرمت لیست لینک base64 که V2RayN/V2RayNG/Shadowrocket استفاده می‌کنند) را جای‌گذاری کنید تا همه‌ی سرورهای آن یک‌جا وارد شده و در یک گروه قابل‌جمع‌شدن در لیست جای بگیرند (یک اشتراک می‌تواند صدها سرور داشته باشد). وقتی سرویس‌دهنده اطلاعات پلن/ترافیک/انقضا را گزارش کند (از طریق هدر `Subscription-Userinfo` یا ورودی‌های ساختگی «info» که برخی سرویس‌دهنده‌ها داخل لیست لینک قرار می‌دهند) این گروه آن را نشان می‌دهد، و یک دکمه‌ی همگام‌سازی مخصوص خودش دارد برای واکشی و به‌روزرسانی دوباره‌ی سرورهایش
-- **دو موتور قابل‌انتخاب**، هر دو به‌صورت کتابخانه‌ی Go تعبیه‌شده (نه فایل باینری جدا) — کنترل کامل چرخه‌ی عمر، بدون نیاز به پارس‌کردن خروجی استاندارد برای آمار. **xray-core** پیش‌فرض است (پشتیبانی گسترده‌تر از انتقال‌ها، به‌ویژه `tcp` با پوشش `headerType=http`)؛ **sing-box** تنها موتوری‌ست که حالت TUN را دارد. هر زمان از پنل «درباره» قابل تعویض است (ابتدا قطع اتصال کنید)
+- **xray-core**، به‌صورت کتابخانه‌ی Go تعبیه‌شده (نه فایل باینری جدا) — کنترل کامل چرخه‌ی عمر و آمار واقعی ترافیک، بدون نیاز به پارس‌کردن خروجی
 - **انتقال‌ها**: TCP (شامل پوشش `headerType=http` مربوط به xray-core)، وب‌سوکت و gRPC، همراه با تشخیص امنیت TLS/REALITY مستقیم از لینک
 - **یکپارچگی با پروکسی سیستم** — اتصال/قطع اتصال به‌طور خودکار پروکسی HTTP سیستم‌عامل را تغییر می‌دهد (روی ویندوز از رجیستری هر کاربر، بدون نیاز به دسترسی بالا)
-- **حالت TUN (فقط ویندوز، فقط sing-box)** — تمام ترافیک سیستم را از طریق یک آداپتور شبکه‌ی مجازی (WinTun، همراه برنامه) عبور می‌دهد، نه فقط برنامه‌هایی که تنظیمات پروکسی را رعایت می‌کنند. نیاز به دسترسی ادمین و انتخاب موتور sing-box دارد؛ Kite می‌تواند خودش را با یک کلیک با دسترسی بالا مجدداً اجرا کند
+- **حالت TUN (ویندوز)** — تمام ترافیک سیستم را از طریق یک آداپتور شبکه‌ی مجازی (TUN خود xray-core با درایور WinTun همراه برنامه) عبور می‌دهد، نه فقط برنامه‌هایی که تنظیمات پروکسی را رعایت می‌کنند. با همه‌ی انواع سرور کار می‌کند، از جمله `headerType=http`، و DNS هم از داخل تونل می‌رود. نیاز به دسترسی ادمین دارد؛ Kite می‌تواند خودش را با یک کلیک با دسترسی بالا مجدداً اجرا کند
 - **Kill Switch (فقط ویندوز)** — در زمان اتصال، تمام ترافیک خروجی به‌جز ترافیک خود Kite را از طریق یک جفت قانون فایروال ویندوز مسدود می‌کند، تا برنامه‌ای که پروکسی سیستم را نادیده می‌گیرد (یا فرآیند موتور کرش کرده) نتواند بیرون از تونل ترافیک درز کند. همان نیاز به دسترسی ادمین مانند حالت TUN
 - **آیکن سینی سیستم** — بستن پنجره آن را به‌جای خروج، به سینی سیستم پنهان می‌کند تا اتصال فعال ادامه یابد؛ منوی سینی شامل نمایش Kite، قطع اتصال، و خروج از Kite است
-- **ابزارهای تشخیصی داخلی** — دکمه‌ی Test یک درخواست واقعی از طریق تونل ارسال کرده و نتیجه‌ی واقعی را گزارش می‌دهد؛ نمایشگر لاگ، لاگ اشکال‌زدایی موتور فعال را به‌صورت درون‌خطی نشان می‌دهد
-- **به‌روزرسانی خودکار** — هنگام اجرا، GitHub Releases را بررسی می‌کند، با یک کلیک دانلود، جایگزین و مجدداً اجرا می‌کند (پنل «درباره» نسخه‌ی Kite، موتور فعال و نسخه‌ی آن را نشان می‌دهد)
+- **ابزارهای تشخیصی داخلی** — دکمه‌ی Test یک درخواست واقعی از طریق تونل ارسال کرده و نتیجه‌ی واقعی را گزارش می‌دهد؛ نمایشگر لاگ، لاگ اشکال‌زدایی خود xray-core را به‌صورت درون‌خطی نشان می‌دهد
+- **به‌روزرسانی خودکار** — هنگام اجرا، GitHub Releases را بررسی می‌کند، با یک کلیک دانلود، جایگزین و مجدداً اجرا می‌کند (پنل «درباره» نسخه‌ی Kite و xray-core تعبیه‌شده را نشان می‌دهد)
 - **تم تیره/روشن**، همراه با لیست سرور قابل‌جست‌وجو، تغییرنام درون‌خطی، و حذف با یک کلیک
 - **۸ زبان**، قابل تغییر از نوار کناری (فارسی از فونت داخلی Vazirmatn استفاده می‌کند):
   - 🇬🇧 English (پیش‌فرض)
@@ -92,25 +92,11 @@ kite/
 ├── main.go / app.go        Wails entrypoint + the App struct (Go methods
 │                            exposed to the frontend via the JS bridge)
 ├── internal/
-│   ├── xray/                 Engine facade (package/dir keeps the historical
-│   │   │                      name from when it *was* the xray-core wrapper
-│   │   │                      -- see CHANGELOG). Dispatches Start/Stop/
-│   │   │                      Status/Traffic to whichever concrete engine
-│   │   │                      below is currently selected (settings.json),
-│   │   │                      so app.go doesn't know which one is active.
-│   │   └── facade.go
-│   ├── engine/
-│   │   ├── xraycore/          xray-core lifecycle (the default engine) --
-│   │   │                      manager.go builds a core.Instance via
-│   │   │                      serial.LoadJSONConfig + core.New; config.go
-│   │   │                      builds the JSON from a server profile
-│   │   └── singbox/           sing-box lifecycle (the only engine with TUN
-│   │       ├── manager.go     support) -- Start/Stop/Restart a real box.Box
-│   │       ├── config.go      Server profile -> sing-box JSON config,
-│   │       │                  decoded via sing-box's own registry-aware
-│   │       │                  JSON decoder (see include.Context)
-│   │       ├── stats.go       Traffic counters (stub, see below)
-│   │       └── tun_windows.go Writes the embedded wintun.dll next to the
+│   ├── xray/                 xray-core lifecycle
+│   │   ├── manager.go         Start/Stop a core.Instance (proxy or TUN mode),
+│   │   │                      traffic counters from xray's stats.Manager
+│   │   ├── config.go          Server profile -> xray-core JSON config
+│   │   └── tun_windows.go     Writes the embedded wintun.dll next to the
 │   │                          exe (TUN mode needs it alongside the binary)
 │   ├── profile/              vmess/vless/trojan/ss link parsing +
 │   │                         JSON-file server storage
@@ -137,10 +123,8 @@ kite/
 
 ## محدودیت‌های شناخته‌شده / قدم‌های بعدی
 
-- **حالت TUN فقط زیر موتور sing-box کار می‌کند** — xray-core (پیش‌فرض) در اینجا ورودی TUN ندارد؛ تغییر به حالت TUN وقتی xray-core انتخاب شده، با خطایی واضح که می‌گوید ابتدا موتور را در پنل «درباره» عوض کنید، شکست می‌خورد.
-- **آمار زنده‌ی ترافیک در هر دو موتور فقط یک نمونه‌ی جایگزین است** — عددهای پنل «نمایش بیشتر» همیشه ۰B/s نشان می‌دهند. هم stats.Manager مربوط به xray-core و هم `trafficcontrol.Manager` مربوط به sing-box (از طریق `experimental.clash_api`/`v2ray_api`) به اتصال بیشتری نیاز دارند که هنوز انجام نشده — یک کار باقی‌مانده برای هر دو موتور.
 - **macOS فقط روی Apple Silicon (arm64)** — بدون نسخه‌ی اینتل. در صورت نیاز، یک ورودی ماتریس `darwin/amd64` را کنار `darwin/arm64` در `.github/workflows/release.yml` اضافه کنید.
-- **حالت TUN فعلاً فقط روی ویندوز** و فقط IPv4 کار می‌کند — مسیر استثنایی که مانع از حلقه‌زدن اتصال بالادستی خود موتور از طریق آداپتور TUN می‌شود (`internal/system/route_windows.go`) فقط آدرس‌های IPv4 حل‌شده را پوشش می‌دهد؛ سروری که فقط از طریق IPv6 در دسترس است هنوز در حالت TUN کار نمی‌کند. پشتیبانی TUN برای Linux/macOS ممکن است (بسته‌ی `tun` خود sing-box از هر دو پشتیبانی می‌کند) اما هنوز اینجا وصل نشده.
+- **حالت TUN فعلاً فقط روی ویندوز** و فقط IPv4 کار می‌کند — مسیر استثنایی که مانع از حلقه‌زدن اتصال بالادستی خود موتور از طریق آداپتور TUN می‌شود (`internal/system/route_windows.go`) فقط آدرس‌های IPv4 حل‌شده را پوشش می‌دهد؛ سروری که فقط از طریق IPv6 در دسترس است هنوز در حالت TUN کار نمی‌کند. پشتیبانی TUN برای Linux/macOS ممکن است (بسته‌ی `tun` خود xray-core از هر دو پشتیبانی می‌کند) اما هنوز اینجا وصل نشده.
 - **پروکسی سیستم لینوکس فقط GNOME را پوشش می‌دهد** (`gsettings`) — محیط‌های دسکتاپ دیگر به بک‌اند مخصوص خودشان در `internal/system/proxy_linux.go` نیاز دارند.
 - **Kill Switch فقط روی ویندوز** — از طریق قوانین `netsh advfirewall` پیاده‌سازی شده (`internal/system/killswitch_windows.go`)؛ لینوکس/مک‌اواس به بک‌اند مخصوص خودشان (`iptables`/`pfctl`) نیاز دارند و فعلاً پیاده‌سازی نشده‌اند (کلید تغییر آن در این پلتفرم‌ها پنهان است، مثل حالت TUN).
 - **دکمه‌ی مینیمایز بومی هنوز فقط به نوار وظیفه مینیمایز می‌کند** — Wails v2 هوکی برای رویداد مینیمایز در سطح سیستم‌عامل ارائه نمی‌دهد، فقط بستن پنجره (`OnBeforeClose`، که ویژگی سینی از آن استفاده می‌کند). فقط بستن پنجره آن را به سینی پنهان می‌کند.
