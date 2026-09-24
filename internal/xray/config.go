@@ -1,10 +1,7 @@
-// Package xraycore wraps xray-core (github.com/xtls/xray-core) as an
-// in-process Go library, the engine Kite originally shipped with before
-// the v0.9.0 sing-box migration. It's kept alongside sing-box (see
-// internal/engine/singbox) because xray-core supports link shapes
-// sing-box has no equivalent for -- notably tcp+headerType=http -- at
-// the cost of no TUN support here (see manager.go).
-package xraycore
+// Package xray runs xray-core (github.com/xtls/xray-core) as an in-process
+// Go library: it builds a config from a server profile and starts/stops an
+// xray-core instance, in proxy mode (local HTTP/SOCKS) or TUN mode.
+package xray
 
 import (
 	"encoding/json"
@@ -20,10 +17,17 @@ import (
 const (
 	HTTPInboundPort  = 2080
 	SOCKSInboundPort = 2081
+
+	// TUN adapter settings. TUNAddress/TUNMask must stay inside the
+	// 172.19.0.0/30 subnet the kill switch allows (internal/system).
+	TUNName    = "kite-tun"
+	TUNAddress = "172.19.0.1"
+	TUNMask    = "255.255.255.252"
+	TUNDNS     = "1.1.1.1"
 )
 
-// Mode mirrors internal/xray's engine.Mode as a plain string so this
-// package has no dependency on the facade.
+// Mode selects what xray-core listens on: a local HTTP/SOCKS proxy
+// ("proxy") or a TUN adapter capturing all system traffic ("tun").
 type Mode = string
 
 const (
@@ -59,10 +63,36 @@ func LogFilePath() string {
 // buildJSON turns a saved server profile into an xray-core JSON config
 // (the same V2Ray-compatible shape xray-core's own config file uses),
 // parsed through core.StartInstance("json", ...) -- see manager.go.
-func buildJSON(server profile.Server) ([]byte, error) {
+func buildJSON(server profile.Server, mode Mode) ([]byte, error) {
 	outbound, err := outboundJSON(server)
 	if err != nil {
 		return nil, err
+	}
+
+	inbounds := []map[string]interface{}{
+		{
+			"tag":      "http-in",
+			"listen":   "127.0.0.1",
+			"port":     HTTPInboundPort,
+			"protocol": "http",
+		},
+		{
+			"tag":      "socks-in",
+			"listen":   "127.0.0.1",
+			"port":     SOCKSInboundPort,
+			"protocol": "socks",
+			"settings": map[string]interface{}{"udp": true},
+		},
+	}
+	if mode == ModeTUN {
+		// xray only brings the adapter up; addressing/routes/DNS are set
+		// by internal/system.SetupTUNInterface once it exists.
+		inbounds = append(inbounds, map[string]interface{}{
+			"tag":      "tun-in",
+			"protocol": "tun",
+			"port":     0,
+			"settings": map[string]interface{}{"name": TUNName, "MTU": 1500},
+		})
 	}
 
 	config := map[string]interface{}{
@@ -70,21 +100,7 @@ func buildJSON(server profile.Server) ([]byte, error) {
 			"loglevel": "debug",
 			"error":    LogFilePath(),
 		},
-		"inbounds": []map[string]interface{}{
-			{
-				"tag":      "http-in",
-				"listen":   "127.0.0.1",
-				"port":     HTTPInboundPort,
-				"protocol": "http",
-			},
-			{
-				"tag":      "socks-in",
-				"listen":   "127.0.0.1",
-				"port":     SOCKSInboundPort,
-				"protocol": "socks",
-				"settings": map[string]interface{}{"udp": true},
-			},
-		},
+		"inbounds": inbounds,
 		"outbounds": []map[string]interface{}{
 			outbound,
 			{"tag": "direct", "protocol": "freedom"},
@@ -184,8 +200,7 @@ func streamSettingsJSON(server profile.Server) map[string]interface{} {
 	default:
 		stream["network"] = "tcp"
 		// headerType=http disguises a raw TCP connection as a plaintext
-		// HTTP request/response -- this is the one transport sing-box has
-		// no equivalent for, and the reason this engine still exists.
+		// HTTP request/response, for servers behind an HTTP-sniffing front end.
 		if server.Extra["headerType"] == "http" {
 			host := firstNonEmpty(server.Extra["host"], server.Address)
 			stream["tcpSettings"] = map[string]interface{}{

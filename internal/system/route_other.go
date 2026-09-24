@@ -11,3 +11,7 @@ func AddExceptionRoute(ip string) error {
 func RemoveExceptionRoute(ip string) error {
 	return nil
 }
+
+func SetupTUNInterface(name, addr, mask, dns string) error {
+	return fmt.Errorf("TUN mode is not implemented on this platform yet")
+}

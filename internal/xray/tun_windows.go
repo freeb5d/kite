@@ -1,6 +1,6 @@
 //go:build windows
 
-package singbox
+package xray
 
 import (
 	"os"
@@ -10,8 +10,8 @@ import (
 )
 
 // prepareTUN writes the embedded wintun.dll next to the running
-// executable if it isn't there yet -- sing-box's TUN inbound looks for
-// it in that exact location on Windows (same as xray-core did).
+// executable if it isn't there yet -- xray-core's TUN inbound looks for
+// it in that exact location on Windows.
 func prepareTUN() error {
 	exePath, err := os.Executable()
 	if err != nil {

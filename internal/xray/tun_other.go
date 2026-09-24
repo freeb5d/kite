@@ -1,6 +1,6 @@
 //go:build !windows
 
-package singbox
+package xray
 
 func prepareTUN() error {
 	return nil

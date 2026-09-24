@@ -3,6 +3,23 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🔀 v0.11.0 — xray-core only, with its own TUN mode
+
+sing-box is removed; Kite runs on xray-core alone again, and the engine picker is gone.
+TUN mode now uses xray-core's own TUN, so **every server works in TUN mode** — including
+`tcp` + `headerType=http` links that sing-box could never connect.
+
+- xray-core only creates the Wintun adapter, so Kite now configures it itself: a static
+  address (172.19.0.1/30), DNS 1.1.1.1 (sent through the tunnel, lowest interface metric
+  so Windows prefers it), and two `/1` routes that take over from the default route.
+- The server's hostname is resolved once before connecting and xray dials that IP (keeping
+  the hostname for SNI and the `Host` header), with an exception route so the connection
+  to the server itself stays outside the tunnel. Otherwise xray's own DNS lookup would
+  go into the tunnel it's trying to build.
+- The retry for "adapter still releasing" on quick reconnects carries over.
+- Traffic stats work in both proxy and TUN mode.
+- The binary is noticeably smaller without sing-box.
+
 ## 🐛 v0.10.4 — Fix TUN mode never connecting (DNS loop)
 
 In TUN mode sing-box couldn't resolve the server's own hostname: its DNS lookups were
