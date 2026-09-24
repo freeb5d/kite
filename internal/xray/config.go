@@ -18,12 +18,10 @@ const (
 	HTTPInboundPort  = 2080
 	SOCKSInboundPort = 2081
 
-	// TUN adapter settings. TUNAddress/TUNMask must stay inside the
-	// 172.19.0.0/30 subnet the kill switch allows (internal/system).
-	TUNName    = "kite-tun"
-	TUNAddress = "172.19.0.1"
-	TUNMask    = "255.255.255.252"
-	TUNDNS     = "1.1.1.1"
+	// TUN adapter settings. Each connection gets its own 172.19.N.1/30
+	// (see manager.go); the kill switch allows all of 172.19.0.0/16.
+	TUNMask = "255.255.255.252"
+	TUNDNS  = "1.1.1.1"
 )
 
 // Mode selects what xray-core listens on: a local HTTP/SOCKS proxy
@@ -63,7 +61,7 @@ func LogFilePath() string {
 // buildJSON turns a saved server profile into an xray-core JSON config
 // (the same V2Ray-compatible shape xray-core's own config file uses),
 // parsed through core.StartInstance("json", ...) -- see manager.go.
-func buildJSON(server profile.Server, mode Mode) ([]byte, error) {
+func buildJSON(server profile.Server, mode Mode, tunName string) ([]byte, error) {
 	outbound, err := outboundJSON(server)
 	if err != nil {
 		return nil, err
@@ -91,7 +89,7 @@ func buildJSON(server profile.Server, mode Mode) ([]byte, error) {
 			"tag":      "tun-in",
 			"protocol": "tun",
 			"port":     0,
-			"settings": map[string]interface{}{"name": TUNName, "MTU": 1500},
+			"settings": map[string]interface{}{"name": tunName, "MTU": 1500},
 		})
 	}
 

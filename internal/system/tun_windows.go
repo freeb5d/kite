@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -46,4 +47,31 @@ func SetupTUNInterface(name, addr, mask, dns string) error {
 		}
 	}
 	return nil
+}
+
+// RemoveStaleTUNRoutes deletes /1 routes through a gateway starting with
+// prefix that a previous run left behind (crash, or an adapter xray never
+// released) -- they'd send all traffic into a dead tunnel.
+func RemoveStaleTUNRoutes(prefix string) {
+	out, err := command("route", "print", "-4").Output()
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		f := strings.Fields(line)
+		if len(f) >= 3 && (f[0] == "0.0.0.0" || f[0] == "128.0.0.0") && f[1] == "128.0.0.0" && strings.HasPrefix(f[2], prefix) {
+			_ = command("route", "delete", f[0], "mask", f[1], f[2]).Run()
+		}
+	}
+}
+
+// TeardownTUNInterface removes the routes SetupTUNInterface added. xray
+// doesn't always release the Wintun adapter on Close, and a lingering
+// adapter keeps its routes -- so all traffic (including xray's own dial to
+// the server, once its exception route is gone) would keep flowing into a
+// dead tunnel. Removing the routes first stops that regardless.
+func TeardownTUNInterface(addr string) {
+	for _, dst := range []string{"0.0.0.0", "128.0.0.0"} {
+		_ = command("route", "delete", dst, "mask", "128.0.0.0", addr).Run()
+	}
 }

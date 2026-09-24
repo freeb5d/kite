@@ -51,6 +51,7 @@ func (a *App) startup(ctx context.Context) {
 	// this the user has no internet (proxy pointing at a dead port, or all
 	// outbound traffic blocked) until they connect and disconnect again.
 	update.CleanupOldBinary()
+	system.RemoveStaleTUNRoutes("172.19.")
 	_ = system.ClearStaleProxy("127.0.0.1", xray.HTTPInboundPort)
 	if system.KillSwitchActive() {
 		_ = system.DisableKillSwitch()

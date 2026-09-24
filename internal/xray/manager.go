@@ -48,6 +48,8 @@ type Manager struct {
 	status          Status
 	instance        *core.Instance
 	exceptionRoutes []string
+	tunAddr         string
+	tunSeq          int
 	uplinkCounter   stats.Counter
 	downlinkCounter stats.Counter
 }
@@ -92,7 +94,14 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 		}
 	}
 
-	configBytes, err := buildJSON(server, mode)
+	// A fresh adapter name per connection: xray doesn't always release the
+	// previous adapter on Close, and reopening one with a live session
+	// fails with "initialization has already been completed".
+	m.tunSeq++
+	tunName := fmt.Sprintf("kite-tun-%d", m.tunSeq)
+	tunAddr := TUNAddress(m.tunSeq)
+
+	configBytes, err := buildJSON(server, mode, tunName)
 	if err != nil {
 		return err
 	}
@@ -133,7 +142,10 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 	}
 
 	if mode == ModeTUN {
-		if err := system.SetupTUNInterface(TUNName, TUNAddress, TUNMask, TUNDNS); err != nil {
+		m.tunAddr = tunAddr
+		if err := system.SetupTUNInterface(tunName, tunAddr, TUNMask, TUNDNS); err != nil {
+			system.TeardownTUNInterface(tunAddr)
+			m.tunAddr = ""
 			_ = instance.Close()
 			return fmt.Errorf("configure TUN adapter: %w", err)
 		}
@@ -209,6 +221,12 @@ func (m *Manager) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// Routes first: if xray leaves the adapter behind, traffic must not
+	// keep flowing into it.
+	if m.tunAddr != "" {
+		system.TeardownTUNInterface(m.tunAddr)
+		m.tunAddr = ""
+	}
 	var err error
 	if m.instance != nil {
 		err = m.instance.Close()
@@ -247,6 +265,13 @@ func (m *Manager) Traffic() Traffic {
 		t.Downlink = m.downlinkCounter.Value()
 	}
 	return t
+}
+
+// TUNAddress is the adapter address for the n-th TUN connection. A new one
+// each time, since a lingering adapter from a previous connection may still
+// hold the old address.
+func TUNAddress(n int) string {
+	return fmt.Sprintf("172.19.%d.1", n%250)
 }
 
 func isAdapterStillReleasing(err error) bool {

@@ -16,10 +16,10 @@ const (
 	// still removed on disable so an upgrade can't leave it behind.
 	legacyKillSwitchBlock = "Kite Kill Switch Block"
 
-	// Must match the address sing-box gives its TUN adapter
-	// (internal/engine/singbox TUNGateway) -- traffic other apps send into
-	// the tunnel leaves with this as its local address.
-	tunSubnet = "172.19.0.0/30"
+	// Must cover the addresses Kite gives its TUN adapters
+	// (internal/xray TUNAddress) -- traffic other apps send into the
+	// tunnel leaves with that as its local address.
+	tunSubnet = "172.19.0.0/16"
 )
 
 // EnableKillSwitch blocks all outbound traffic except Kite's own (which

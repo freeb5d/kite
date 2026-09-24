@@ -3,6 +3,20 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.11.1 — Fix TUN reconnect and traffic looping after disconnect
+
+xray-core doesn't always release its Wintun adapter when a TUN session closes. The leftover
+adapter kept its routes, so after disconnecting, all traffic — including xray's own
+connection to the server — kept flowing into a dead tunnel, and reconnecting failed with
+"initialization has already been completed".
+
+- Disconnect now deletes Kite's TUN routes *before* closing xray, so a lingering adapter
+  can't capture traffic.
+- Each TUN connection uses a fresh adapter name and address (`kite-tun-N`,
+  `172.19.N.1`), so it never collides with a leftover one. The kill switch allows the
+  whole `172.19.0.0/16` range to match.
+- On launch, Kite removes TUN routes left behind by a previous run.
+
 ## 🔀 v0.11.0 — xray-core only, with its own TUN mode
 
 sing-box is removed; Kite runs on xray-core alone again, and the engine picker is gone.

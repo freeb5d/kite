@@ -15,3 +15,7 @@ func RemoveExceptionRoute(ip string) error {
 func SetupTUNInterface(name, addr, mask, dns string) error {
 	return fmt.Errorf("TUN mode is not implemented on this platform yet")
 }
+
+func TeardownTUNInterface(addr string) {}
+
+func RemoveStaleTUNRoutes(prefix string) {}
