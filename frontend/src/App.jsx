@@ -24,6 +24,9 @@ import {
   Platform,
   IsElevated,
   RestartElevated,
+  EditSubscription,
+  ShareLink,
+  ShareSubscription,
 } from '../wailsjs/go/main/App'
 
 function errorText(err) {
@@ -31,6 +34,13 @@ function errorText(err) {
   if (typeof err === 'string') return err
   if (err.message) return err.message
   return String(err)
+}
+
+async function copyText(text) {
+  if (window.runtime && window.runtime.ClipboardSetText) {
+    if (await window.runtime.ClipboardSetText(text)) return
+  }
+  await navigator.clipboard.writeText(text)
 }
 
 function openExternal(url) {
@@ -73,6 +83,7 @@ const icons = {
   download: 'M12 3v12m0 0-4-4m4 4 4-4M4 21h16',
   shield: 'M12 3 5 6v5c0 4.5 3 7.7 7 9 4-1.3 7-4.5 7-9V6l-7-3Z',
   router: 'M4 15h16v4H4z M4 19v0 M20 19v0 M8 15V9a4 4 0 0 1 8 0v6 M12 3v2',
+  share: 'M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13',
   translate: 'M4 5h7M9 3v2M9 5a10.4 10.4 0 0 1-4 8M3 9c0 3 3 5.5 6 6M12 20l4-9 4 9M13.5 17h5',
 }
 
@@ -96,7 +107,7 @@ function IconButton({ onClick, title, active, children }) {
   )
 }
 
-function ServerRow({ s, isSelected, isRunning, editingId, editingName, setEditingName, onSelect, onStartEdit, onCommitEdit, onCancelEdit, onDelete, t }) {
+function ServerRow({ s, isSelected, isRunning, editingId, editingName, setEditingName, onSelect, onStartEdit, onCommitEdit, onCancelEdit, onDelete, onShare, t }) {
   const isActive = isSelected && isRunning
   return (
     <div
@@ -133,6 +144,13 @@ function ServerRow({ s, isSelected, isRunning, editingId, editingName, setEditin
           </div>
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          <button
+            className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
+            onClick={onShare}
+            title={t('shareLink')}
+          >
+            <Icon path={icons.share} className="w-3.5 h-3.5" />
+          </button>
           <button
             className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
             onClick={onStartEdit}
@@ -284,15 +302,86 @@ export default function App() {
         } catch {
           usage = null
         }
-        groupMap.set(groupId, { id: groupId, name: s.extra?.subGroupName || 'Subscription', servers: [], notes, usage })
+        groupMap.set(groupId, {
+          id: groupId,
+          name: s.extra?.subGroupName || 'Subscription',
+          url: s.extra?.subURL || '',
+          updatedAt: Number(s.extra?.subUpdatedAt || 0),
+          updateHours: Number(s.extra?.subUpdateHours || 0),
+          servers: [],
+          notes,
+          usage,
+        })
       }
       groupMap.get(groupId).servers.push(s)
     }
     return { standalone, groups: [...groupMap.values()] }
   }, [filtered])
 
+  const autoSynced = useRef(false)
+  useEffect(() => {
+    if (autoSynced.current || groups.length === 0) return
+    autoSynced.current = true
+    const now = Date.now() / 1000
+    for (const g of groups) {
+      if (g.updateHours > 0 && now - g.updatedAt > g.updateHours * 3600) {
+        RefreshSubscription(g.id)
+          .then((fresh) => setServers((prev) => [...prev.filter((s) => s.extra?.subGroup !== g.id), ...fresh]))
+          .catch(() => {})
+      }
+    }
+  }, [groups])
+
   const [expandedGroups, setExpandedGroups] = useState(() => new Set())
   const [refreshingGroup, setRefreshingGroup] = useState(null)
+  const [shareMenuGroup, setShareMenuGroup] = useState(null)
+  const [editGroup, setEditGroup] = useState(null) // { id, name, url }
+  const [notice, setNotice] = useState('')
+  const noticeTimer = useRef(null)
+
+  function flash(msg) {
+    setNotice(msg)
+    clearTimeout(noticeTimer.current)
+    noticeTimer.current = setTimeout(() => setNotice(''), 2000)
+  }
+
+  async function handleShareServer(id, e) {
+    e.stopPropagation()
+    setError('')
+    try {
+      await copyText(await ShareLink(id))
+      flash(t('linkCopied'))
+    } catch (err) {
+      setError(errorText(err))
+    }
+  }
+
+  async function handleShareGroup(g, what) {
+    setShareMenuGroup(null)
+    setError('')
+    try {
+      await copyText(what === 'url' ? g.url : await ShareSubscription(g.id))
+      flash(t('linkCopied'))
+    } catch (err) {
+      setError(errorText(err))
+    }
+  }
+
+  async function handleSaveGroup() {
+    const { id, name, url } = editGroup
+    setError('')
+    try {
+      await EditSubscription(id, name, url)
+      setServers((prev) =>
+        prev.map((s) =>
+          s.extra?.subGroup === id ? { ...s, extra: { ...s.extra, subGroupName: name.trim(), subURL: url.trim() } } : s,
+        ),
+      )
+      setEditGroup(null)
+    } catch (err) {
+      setError(errorText(err))
+    }
+  }
   const searching = query.trim().length > 0
   function toggleGroup(id) {
     setExpandedGroups((prev) => {
@@ -336,7 +425,7 @@ export default function App() {
   }
 
   function usageInfo(usage) {
-    if (!usage || (!usage.totalBytes && !usage.expireUnix)) return null
+    if (!usage || (!usage.totalBytes && !usage.expireUnix && !usage.uploadBytes && !usage.downloadBytes)) return null
     const usedGB = (usage.uploadBytes + usage.downloadBytes) / 1e9
     const totalGB = usage.totalBytes > 0 ? usage.totalBytes / 1e9 : null
     return {
@@ -708,6 +797,7 @@ export default function App() {
                 onCommitEdit={() => commitEditing(s.id)}
                 onCancelEdit={() => setEditingId(null)}
                 onDelete={(e) => handleDelete(s.id, e)}
+                onShare={(e) => handleShareServer(s.id, e)}
                 t={t}
               />
             ))}
@@ -751,6 +841,35 @@ export default function App() {
                           className={`w-3.5 h-3.5 ${refreshingGroup === g.id ? 'animate-spin' : ''}`}
                         />
                       </button>
+                      <div className="relative">
+                        <button
+                          className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
+                          onClick={() => setShareMenuGroup((cur) => (cur === g.id ? null : g.id))}
+                          title={t('share')}
+                        >
+                          <Icon path={icons.share} className="w-3.5 h-3.5" />
+                        </button>
+                        {shareMenuGroup === g.id && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShareMenuGroup(null)} />
+                            <div className="absolute right-0 top-7 z-50 w-48 rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] shadow-lg py-1 text-xs">
+                              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)]" onClick={() => handleShareGroup(g, 'url')}>
+                                {t('copySubscriptionUrl')}
+                              </button>
+                              <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)]" onClick={() => handleShareGroup(g, 'links')}>
+                                {t('copyAllServerLinks')}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <button
+                        className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
+                        onClick={() => setEditGroup({ id: g.id, name: g.name, url: g.url })}
+                        title={t('edit')}
+                      >
+                        <Icon path={icons.pencil} className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] flex items-center justify-center"
                         onClick={(e) => handleDeleteGroup(g.id, e)}
@@ -775,7 +894,7 @@ export default function App() {
                           </span>
                         </>
                       ) : (
-                        <span className="flex-1 text-[11px] text-[var(--text-dim)]">{info.usedGB} GB used</span>
+                        <span className="flex-1 text-[11px] text-[var(--text-dim)]">{t('gbUsedUnlimited', info.usedGB)}</span>
                       )}
                       {info.expiryDate && (
                         <span className="shrink-0 text-[11px] text-[var(--text-faint)]">
@@ -800,6 +919,7 @@ export default function App() {
                           onCommitEdit={() => commitEditing(s.id)}
                           onCancelEdit={() => setEditingId(null)}
                           onDelete={(e) => handleDelete(s.id, e)}
+                          onShare={(e) => handleShareServer(s.id, e)}
                           t={t}
                         />
                       ))}
@@ -984,6 +1104,52 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {notice && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] px-4 py-2 text-xs shadow-lg">
+          {notice}
+        </div>
+      )}
+
+      {editGroup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setEditGroup(null)}>
+          <div
+            className="w-full max-w-sm rounded-xl bg-[var(--bg-panel)] border border-[var(--border)] p-5 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-sm font-semibold">{t('editSubscription')}</h2>
+            <label className="block text-xs text-[var(--text-dim)]">
+              {t('name')}
+              <input
+                autoFocus
+                className="mt-1 w-full rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] px-3 py-2 text-sm focus:outline-none focus:border-[var(--accent)]"
+                value={editGroup.name}
+                onChange={(e) => setEditGroup({ ...editGroup, name: e.target.value })}
+              />
+            </label>
+            <label className="block text-xs text-[var(--text-dim)]">
+              {t('subscriptionUrl')}
+              <input
+                className="mt-1 w-full rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] px-3 py-2 text-xs focus:outline-none focus:border-[var(--accent)]"
+                value={editGroup.url}
+                onChange={(e) => setEditGroup({ ...editGroup, url: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveGroup()}
+              />
+            </label>
+            <div className="flex justify-end gap-2 pt-1">
+              <button className="text-xs px-3 py-1.5 rounded-md hover:bg-[var(--bg-hover)]" onClick={() => setEditGroup(null)}>
+                {t('cancel')}
+              </button>
+              <button
+                className="text-xs px-3 py-1.5 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-text)]"
+                onClick={handleSaveGroup}
+              >
+                {t('save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {aboutOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setAboutOpen(false)}>

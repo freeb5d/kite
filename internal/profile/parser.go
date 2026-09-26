@@ -73,7 +73,18 @@ func ParseSubscription(body string) ([]Server, []string, []error) {
 	var servers []Server
 	var notes []string
 	var errs []error
-	for _, line := range strings.Split(content, "\n") {
+	lines := strings.Split(content, "\n")
+	if structured, structErrs, ok := parseStructured(content); ok {
+		errs, lines = structErrs, nil
+		for _, s := range structured {
+			if isInfoNode(s) {
+				notes = append(notes, s.Name)
+			} else {
+				servers = append(servers, s)
+			}
+		}
+	}
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
@@ -319,6 +330,7 @@ func queryToExtra(q url.Values) map[string]string {
 }
 
 func nameOrDefault(name, fallback string) string {
+	name = strings.TrimSpace(name)
 	if name == "" {
 		return fallback
 	}

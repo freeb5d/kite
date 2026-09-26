@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	goruntime "runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -139,6 +141,58 @@ func (a *App) DeleteSubscriptionGroup(groupID string) error {
 	return err
 }
 
+// EditSubscription renames a subscription group and/or changes its URL.
+// A changed URL takes effect on the next sync.
+func (a *App) EditSubscription(groupID, name, subURL string) error {
+	name, subURL = strings.TrimSpace(name), strings.TrimSpace(subURL)
+	if name == "" {
+		return fmt.Errorf("name can't be empty")
+	}
+	if u, err := url.Parse(subURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return fmt.Errorf("subscription URL must be an http(s):// link")
+	}
+	n, err := a.store.UpdateWhere(inGroup(groupID), func(s *profile.Server) {
+		s.Extra["subGroupName"] = name
+		s.Extra["subURL"] = subURL
+	})
+	if err == nil && n == 0 {
+		err = fmt.Errorf("subscription group not found")
+	}
+	return err
+}
+
+// ShareLink returns a server's standard share link (vless://, vmess://,
+// trojan://, ss://) for copying into another client.
+func (a *App) ShareLink(id string) (string, error) {
+	server, err := a.store.Get(id)
+	if err != nil {
+		return "", err
+	}
+	return profile.ShareLink(server)
+}
+
+// ShareSubscription returns the share links of every server in a
+// subscription group, one per line -- a plain link list any client can
+// import, even when the original subscription URL is private.
+func (a *App) ShareSubscription(groupID string) (string, error) {
+	all, err := a.store.List()
+	if err != nil {
+		return "", err
+	}
+	var links []string
+	for _, s := range all {
+		if s.Extra["subGroup"] == groupID {
+			if link, err := profile.ShareLink(s); err == nil {
+				links = append(links, link)
+			}
+		}
+	}
+	if len(links) == 0 {
+		return "", fmt.Errorf("subscription group not found")
+	}
+	return strings.Join(links, "\n"), nil
+}
+
 func inGroup(groupID string) func(profile.Server) bool {
 	return func(s profile.Server) bool { return s.Extra["subGroup"] == groupID }
 }
@@ -178,6 +232,22 @@ func (a *App) importSubscription(subURL, groupID string) ([]profile.Server, erro
 	if u, err := url.Parse(subURL); err == nil && u.Host != "" {
 		groupName = u.Host
 	}
+	// Panels like 3x-ui and Marzban name the subscription via
+	// Profile-Title, optionally base64-encoded as "base64:...".
+	if title := strings.TrimSpace(resp.Header.Get("Profile-Title")); title != "" {
+		if enc, ok := strings.CutPrefix(title, "base64:"); ok {
+			if dec, err := base64.StdEncoding.DecodeString(enc); err == nil {
+				title = string(dec)
+			}
+		}
+		if title = strings.TrimSpace(title); title != "" {
+			groupName = title
+		}
+	}
+	// Refresh interval (hours) the provider asks for; the UI auto-syncs
+	// subscriptions whose interval has passed.
+	updateHours := strings.TrimSpace(resp.Header.Get("Profile-Update-Interval"))
+	updatedAt := strconv.FormatInt(time.Now().Unix(), 10)
 
 	// Usage/expiry, when the provider reports it via the informal but
 	// widely-adopted Subscription-Userinfo response header, plus any
@@ -205,6 +275,10 @@ func (a *App) importSubscription(subURL, groupID string) ([]profile.Server, erro
 		parsed[i].Extra["subGroup"] = groupID
 		parsed[i].Extra["subGroupName"] = groupName
 		parsed[i].Extra["subURL"] = subURL
+		parsed[i].Extra["subUpdatedAt"] = updatedAt
+		if updateHours != "" {
+			parsed[i].Extra["subUpdateHours"] = updateHours
+		}
 		if subMeta != "" {
 			parsed[i].Extra["subUsage"] = subMeta
 		}

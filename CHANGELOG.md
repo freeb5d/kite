@@ -3,6 +3,20 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## ✨ v0.12.0 — More subscription formats, share and edit
+
+- **More subscription formats**: besides the base64 link list, Kite now imports Clash/Mihomo
+  YAML (`proxies:`), sing-box JSON and Xray JSON (`outbounds`), and Shadowsocks SIP008
+  JSON. Unsupported entries (e.g. hysteria2) are skipped instead of failing the import.
+- **Share**: every server has a share button that copies its standard link. Subscriptions
+  can copy their URL, or all their servers as a plain link list.
+- **Edit subscriptions**: rename a subscription or change its URL.
+- **Auto-sync**: subscriptions re-sync on launch when the interval the provider asks for
+  (`Profile-Update-Interval`) has passed.
+- Subscriptions named via the `Profile-Title` header (3x-ui, Marzban) use that name.
+- Unlimited plans (`total=0`) now show how much you've used instead of nothing.
+- Server names are trimmed (some panels add a leading space).
+
 ## 🐛 v0.11.1 — Fix TUN reconnect and traffic looping after disconnect
 
 xray-core doesn't always release its Wintun adapter when a TUN session closes. The leftover
