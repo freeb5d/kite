@@ -287,6 +287,108 @@ export default function App() {
     )
   }, [servers, query])
 
+  const [pingMode, setPingMode] = useState(() => {
+    try {
+      return localStorage.getItem('kite-ping-mode') || 'tcp'
+    } catch {
+      return 'tcp'
+    }
+  })
+  // id -> ms | -1 (failed) | null (running). Remembered across restarts,
+  // like v2rayNG, until the next test.
+  const [pings, setPings] = useState(() => (() => {
+    try {
+      return JSON.parse(localStorage.getItem('kite-pings')) ?? {}
+    } catch {
+      return {}
+    }
+  })())
+  const [pinging, setPinging] = useState(false)
+  const [sortByDelay, setSortByDelay] = useState(() => (() => {
+    try {
+      return JSON.parse(localStorage.getItem('kite-sort-delay')) ?? false
+    } catch {
+      return false
+    }
+  })())
+  const [pingMenuOpen, setPingMenuOpen] = useState(false)
+  const cancelPing = useRef(false)
+
+  useEffect(() => {
+    if (pinging) return
+    try {
+      localStorage.setItem('kite-pings', JSON.stringify(pings))
+      localStorage.setItem('kite-sort-delay', JSON.stringify(sortByDelay))
+    } catch {
+      // ignore
+    }
+  }, [pings, pinging, sortByDelay])
+
+  function choosePingMode(m) {
+    setPingMode(m)
+    setPings({})
+    try {
+      localStorage.setItem('kite-ping-mode', m)
+    } catch {
+      // ignore
+    }
+  }
+
+  // Tests the given servers (everything shown, or one subscription group).
+  async function runPing(list) {
+    if (list.length === 0) return
+    cancelPing.current = false
+    setPinging(true)
+    setPings((prev) => ({ ...prev, ...Object.fromEntries(list.map((s) => [s.id, null])) }))
+    // Real delay starts an xray-core instance per server, so keep it gentle.
+    const limit = pingMode === 'real' ? 4 : 16
+    let next = 0
+    async function worker() {
+      while (next < list.length && !cancelPing.current) {
+        const s = list[next++]
+        let ms = -1
+        try {
+          ms = await PingServer(s.id, pingMode)
+        } catch {
+          ms = -1
+        }
+        setPings((prev) => ({ ...prev, [s.id]: ms }))
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, list.length) }, worker))
+    // Servers skipped by Stop go back to "not tested".
+    setPings((prev) => Object.fromEntries(Object.entries(prev).filter(([, v]) => v !== null)))
+    setPinging(false)
+  }
+
+  async function handleRemoveFailed() {
+    setPingMenuOpen(false)
+    const failed = servers.filter((s) => pings[s.id] === -1)
+    if (failed.length === 0) return
+    if (!window.confirm(t('removeFailedConfirm', failed.length))) return
+    for (const s of failed) {
+      try {
+        await DeleteProfile(s.id)
+      } catch {
+        // keep going
+      }
+    }
+    const gone = new Set(failed.map((s) => s.id))
+    setServers((prev) => prev.filter((s) => !gone.has(s.id)))
+    if (gone.has(selectedId)) setSelectedId(null)
+  }
+
+  // Fastest first, failed last, untested in between (v2rayNG's order).
+  function byDelay(list) {
+    if (!sortByDelay) return list
+    const rank = (s) => {
+      const v = pings[s.id]
+      if (v === undefined || v === null) return 1e9
+      return v < 0 ? 2e9 : v
+    }
+    return [...list].sort((a, b) => rank(a) - rank(b))
+  }
+
   // Servers imported from a subscription URL all share the same
   // extra.subGroup id -- fold those into one collapsible row instead of
   // flooding the list (a subscription can carry hundreds of servers).
@@ -325,8 +427,10 @@ export default function App() {
       }
       groupMap.get(groupId).servers.push(s)
     }
-    return { standalone, groups: [...groupMap.values()] }
-  }, [filtered])
+    for (const g of groupMap.values()) g.servers = byDelay(g.servers)
+    return { standalone: byDelay(standalone), groups: [...groupMap.values()] }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, pings, sortByDelay])
 
   const autoSynced = useRef(false)
   useEffect(() => {
@@ -345,48 +449,6 @@ export default function App() {
   const [expandedGroups, setExpandedGroups] = useState(() => new Set())
   const [refreshingGroup, setRefreshingGroup] = useState(null)
   const [shareMenuGroup, setShareMenuGroup] = useState(null)
-  const [pingMode, setPingMode] = useState(() => {
-    try {
-      return localStorage.getItem('kite-ping-mode') || 'tcp'
-    } catch {
-      return 'tcp'
-    }
-  })
-  const [pings, setPings] = useState({}) // id -> ms | -1 (failed) | null (running)
-  const [pinging, setPinging] = useState(false)
-
-  function choosePingMode(m) {
-    setPingMode(m)
-    setPings({})
-    try {
-      localStorage.setItem('kite-ping-mode', m)
-    } catch {
-      // ignore
-    }
-  }
-
-  async function handlePingAll() {
-    const list = filtered
-    setPinging(true)
-    setPings(Object.fromEntries(list.map((s) => [s.id, null])))
-    // Real delay starts an xray-core instance per server, so keep it gentle.
-    const limit = pingMode === 'real' ? 4 : 16
-    let next = 0
-    async function worker() {
-      while (next < list.length) {
-        const s = list[next++]
-        let ms = -1
-        try {
-          ms = await PingServer(s.id, pingMode)
-        } catch {
-          ms = -1
-        }
-        setPings((prev) => ({ ...prev, [s.id]: ms }))
-      }
-    }
-    await Promise.all(Array.from({ length: Math.min(limit, list.length) }, worker))
-    setPinging(false)
-  }
   const [editGroup, setEditGroup] = useState(null) // { id, name, url }
   const [notice, setNotice] = useState('')
   const noticeTimer = useRef(null)
@@ -828,14 +890,67 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <button
-                onClick={handlePingAll}
-                disabled={pinging || filtered.length === 0}
-                title={t('pingAll')}
-                className="shrink-0 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-dim)] disabled:opacity-50"
-              >
-                {pinging ? t('pinging') : t('pingAll')}
-              </button>
+              {pinging ? (
+                <button
+                  onClick={() => (cancelPing.current = true)}
+                  className="shrink-0 rounded-lg border border-[var(--danger-border)] text-[var(--danger)] hover:bg-[var(--danger-bg)] px-2.5 py-1 text-[11px]"
+                >
+                  {t('stop')}
+                </button>
+              ) : (
+                <button
+                  onClick={() => runPing(filtered)}
+                  disabled={filtered.length === 0}
+                  title={t('pingAll')}
+                  className="shrink-0 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-dim)] disabled:opacity-50"
+                >
+                  {t('pingAll')}
+                </button>
+              )}
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setPingMenuOpen((v) => !v)}
+                  className="rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] w-7 h-[26px] flex items-center justify-center text-[var(--text-dim)]"
+                  title={t('more')}
+                >
+                  ⋮
+                </button>
+                {pingMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setPingMenuOpen(false)} />
+                    <div className="absolute right-0 top-8 z-50 w-52 rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] shadow-lg py-1 text-xs">
+                      <button
+                        className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2"
+                        onClick={() => {
+                          setSortByDelay((v) => !v)
+                          setPingMenuOpen(false)
+                        }}
+                      >
+                        <span className="w-3">{sortByDelay ? '✓' : ''}</span>
+                        {t('sortByDelay')}
+                      </button>
+                      <button
+                        className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2 disabled:opacity-40"
+                        disabled={pinging || !servers.some((s) => pings[s.id] === -1)}
+                        onClick={handleRemoveFailed}
+                      >
+                        <span className="w-3" />
+                        {t('removeFailed')}
+                      </button>
+                      <button
+                        className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2"
+                        onClick={() => {
+                          setPings({})
+                          setPingMenuOpen(false)
+                        }}
+                      >
+                        <span className="w-3" />
+                        {t('clearResults')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {addOpen && (
@@ -912,6 +1027,14 @@ export default function App() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center disabled:opacity-40"
+                        onClick={() => runPing(g.servers)}
+                        disabled={pinging}
+                        title={t('pingGroup')}
+                      >
+                        <Icon path={icons.gauge} className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
                         onClick={(e) => handleSyncGroup(g.id, e)}

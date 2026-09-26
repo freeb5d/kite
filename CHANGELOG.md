@@ -3,6 +3,17 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## ✨ v0.14.0 — v2rayNG-style ping: sort, remove failed, test one group
+
+Ping now works like v2rayNG:
+
+- **Sort by delay** — fastest servers first, failed ones last (in the **⋮** menu next to Ping).
+- **Remove failed servers** — deletes every server that failed the last test, after asking.
+- **Test one subscription** — ping just that group instead of everything.
+- **Stop** — cancel a test that's running.
+- **Results are remembered** — delays stay visible after restarting, until the next test.
+- **Clear results** from the same menu.
+
 ## ✨ v0.13.0 — Ping servers: TCP, HTTP or real delay
 
 Under the search box there's now a **TCP · HTTP · Real delay** switch and a **Ping** button;
