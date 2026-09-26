@@ -28,6 +28,7 @@ import {
   ShareLink,
   ShareSubscription,
   PingServer,
+  SaveProfile,
 } from '../wailsjs/go/main/App'
 
 function errorText(err) {
@@ -164,7 +165,7 @@ function ServerRow({ s, isSelected, isRunning, editingId, editingName, setEditin
           <button
             className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
             onClick={onStartEdit}
-            title={t('rename')}
+            title={t('editServer')}
           >
             <Icon path={icons.pencil} className="w-3.5 h-3.5" />
           </button>
@@ -174,6 +175,161 @@ function ServerRow({ s, isSelected, isRunning, editingId, editingName, setEditin
             title={t('remove')}
           >
             <Icon path={icons.trash} className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const FINGERPRINTS = ['', 'chrome', 'firefox', 'safari', 'ios', 'android', 'edge', '360', 'qq', 'random', 'randomized']
+const SS_METHODS = [
+  'aes-128-gcm', 'aes-256-gcm', 'chacha20-poly1305', 'chacha20-ietf-poly1305', 'xchacha20-poly1305',
+  'xchacha20-ietf-poly1305', '2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm', '2022-blake3-chacha20-poly1305', 'none',
+]
+const VMESS_CIPHERS = ['auto', 'aes-128-gcm', 'chacha20-poly1305', 'none', 'zero']
+const FLOWS = ['', 'xtls-rprx-vision', 'xtls-rprx-vision-udp443']
+
+// Normalizes the transport/security keys: vmess:// links store them as
+// "network"/"tls", the other link types as "type"/"security".
+function editableServer(server) {
+  const extra = { ...(server.extra || {}) }
+  extra.type = extra.type || extra.network || 'tcp'
+  extra.security = extra.security || extra.tls || 'none'
+  delete extra.network
+  delete extra.tls
+  return { ...server, extra }
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="block text-[11px] text-[var(--text-faint)] mb-1">{label}</span>
+      {children}
+    </label>
+  )
+}
+
+const inputClass =
+  'w-full rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] px-2.5 py-1.5 text-xs focus:outline-none focus:border-[var(--accent)]'
+
+function ServerEditor({ initial, onSave, onCancel, t }) {
+  const [s, setS] = useState(() => editableServer(initial))
+  const [err, setErr] = useState('')
+  const e = s.extra
+  const set = (k, v) => setS((prev) => ({ ...prev, [k]: v }))
+  const setX = (k, v) => setS((prev) => ({ ...prev, extra: { ...prev.extra, [k]: v } }))
+  const text = (label, value, onChange, placeholder = '') => (
+    <Field label={label}>
+      <input className={inputClass} value={value ?? ''} placeholder={placeholder} onChange={(ev) => onChange(ev.target.value)} />
+    </Field>
+  )
+  const select = (label, value, options, onChange) => (
+    <Field label={label}>
+      <select className={inputClass} value={value ?? ''} onChange={(ev) => onChange(ev.target.value)}>
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o === '' ? t('none') : o}
+          </option>
+        ))}
+      </select>
+    </Field>
+  )
+
+  async function save() {
+    setErr('')
+    // Drop empty extras so share links stay clean.
+    const extra = Object.fromEntries(Object.entries(s.extra).filter(([, v]) => v !== '' && v !== undefined))
+    if (extra.security === 'none') delete extra.security
+    try {
+      await onSave({ ...s, port: Number(s.port) || 0, extra })
+    } catch (ex) {
+      setErr(errorText(ex))
+    }
+  }
+
+  const section = (title) => <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--accent)] pt-2">{title}</div>
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
+      <div
+        className="w-full max-w-lg max-h-[90vh] flex flex-col rounded-xl bg-[var(--bg-panel)] border border-[var(--border)]"
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">{initial.id ? t('editServer') : t('addManually')}</h2>
+          <span className="text-[11px] uppercase text-[var(--text-faint)]">{s.protocol}</span>
+        </div>
+        <div className="px-5 pb-4 overflow-y-auto space-y-3">
+          {section(t('basic'))}
+          {text(t('name'), s.name, (v) => set('name', v))}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2">{text(t('address'), s.address, (v) => set('address', v), 'example.com')}</div>
+            {text(t('port'), s.port, (v) => set('port', v.replace(/\D/g, '')), '443')}
+          </div>
+          {s.protocol === 'vmess' && (
+            <>
+              {text(t('uuid'), s.uuid, (v) => set('uuid', v))}
+              {select(t('encryption'), e.scy || 'auto', VMESS_CIPHERS, (v) => setX('scy', v))}
+            </>
+          )}
+          {s.protocol === 'vless' && (
+            <>
+              {text(t('uuid'), s.uuid, (v) => set('uuid', v))}
+              {select(t('flow'), e.flow || '', FLOWS, (v) => setX('flow', v))}
+              {text(t('encryption'), e.encryption, (v) => setX('encryption', v), 'none')}
+            </>
+          )}
+          {s.protocol === 'trojan' && text(t('password'), s.password, (v) => set('password', v))}
+          {s.protocol === 'shadowsocks' && (
+            <>
+              {select(t('method'), s.method || 'aes-256-gcm', SS_METHODS, (v) => set('method', v))}
+              {text(t('password'), s.password, (v) => set('password', v))}
+            </>
+          )}
+
+          {s.protocol !== 'shadowsocks' && (
+            <>
+              {section(t('transport'))}
+              {select(t('network'), e.type, ['tcp', 'ws', 'grpc'], (v) => setX('type', v))}
+              {e.type === 'tcp' && select(t('headerType'), e.headerType || 'none', ['none', 'http'], (v) => setX('headerType', v === 'none' ? '' : v))}
+              {(e.type === 'ws' || (e.type === 'tcp' && e.headerType === 'http')) && (
+                <>
+                  {text(t('hostHeader'), e.host, (v) => setX('host', v))}
+                  {text(t('path'), e.path, (v) => setX('path', v), '/')}
+                </>
+              )}
+              {e.type === 'grpc' && text(t('serviceName'), e.serviceName, (v) => setX('serviceName', v))}
+
+              {section(t('security'))}
+              {select(t('security'), e.security, ['none', 'tls', 'reality'], (v) => setX('security', v))}
+              {e.security !== 'none' && (
+                <>
+                  {text(t('sni'), e.sni, (v) => setX('sni', v))}
+                  {select(t('fingerprint'), e.fp || '', FINGERPRINTS, (v) => setX('fp', v))}
+                </>
+              )}
+              {e.security === 'tls' && text(t('alpn'), e.alpn, (v) => setX('alpn', v), 'h2,http/1.1')}
+              {e.security === 'reality' && (
+                <>
+                  {text(t('publicKey'), e.pbk, (v) => setX('pbk', v))}
+                  {text(t('shortId'), e.sid, (v) => setX('sid', v))}
+                  {text(t('spiderX'), e.spx, (v) => setX('spx', v), '/')}
+                </>
+              )}
+            </>
+          )}
+          {err && <p className="text-xs text-[var(--danger)]">{err}</p>}
+        </div>
+        <div className="px-5 py-3 border-t border-[var(--border)] flex justify-end gap-2">
+          <button className="text-xs px-3 py-1.5 rounded-md hover:bg-[var(--bg-hover)]" onClick={onCancel}>
+            {t('cancel')}
+          </button>
+          <button
+            className="text-xs px-3 py-1.5 rounded-md bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-text)]"
+            onClick={save}
+          >
+            {t('save')}
           </button>
         </div>
       </div>
@@ -450,6 +606,14 @@ export default function App() {
   const [refreshingGroup, setRefreshingGroup] = useState(null)
   const [shareMenuGroup, setShareMenuGroup] = useState(null)
   const [editGroup, setEditGroup] = useState(null) // { id, name, url }
+  const [editServer, setEditServer] = useState(null) // server being edited / added
+
+  async function handleSaveServer(server) {
+    const saved = await SaveProfile(server)
+    setServers((prev) => (prev.some((x) => x.id === saved.id) ? prev.map((x) => (x.id === saved.id ? saved : x)) : [...prev, saved]))
+    setSelectedId(saved.id)
+    setEditServer(null)
+  }
   const [notice, setNotice] = useState('')
   const noticeTimer = useRef(null)
 
@@ -971,6 +1135,20 @@ export default function App() {
                 </button>
               </div>
             )}
+            {addOpen && (
+              <div className="flex items-center gap-1.5 mt-2 text-[11px] text-[var(--text-faint)]">
+                {t('addManually')}:
+                {['vless', 'vmess', 'trojan', 'shadowsocks'].map((proto) => (
+                  <button
+                    key={proto}
+                    className="rounded border border-[var(--border)] px-1.5 py-0.5 hover:bg-[var(--bg-hover)] text-[var(--text-dim)]"
+                    onClick={() => setEditServer({ id: '', name: '', protocol: proto, address: '', port: 443, extra: {} })}
+                  >
+                    {proto === 'shadowsocks' ? 'ss' : proto}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -989,7 +1167,10 @@ export default function App() {
                 editingName={editingName}
                 setEditingName={setEditingName}
                 onSelect={() => setSelectedId(s.id)}
-                onStartEdit={(e) => startEditing(s, e)}
+                onStartEdit={(e) => {
+                  e.stopPropagation()
+                  setEditServer(s)
+                }}
                 onCommitEdit={() => commitEditing(s.id)}
                 onCancelEdit={() => setEditingId(null)}
                 onDelete={(e) => handleDelete(s.id, e)}
@@ -1125,7 +1306,10 @@ export default function App() {
                           editingName={editingName}
                           setEditingName={setEditingName}
                           onSelect={() => setSelectedId(s.id)}
-                          onStartEdit={(e) => startEditing(s, e)}
+                          onStartEdit={(e) => {
+                            e.stopPropagation()
+                            setEditServer(s)
+                          }}
                           onCommitEdit={() => commitEditing(s.id)}
                           onCancelEdit={() => setEditingId(null)}
                           onDelete={(e) => handleDelete(s.id, e)}
@@ -1320,6 +1504,10 @@ export default function App() {
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] px-4 py-2 text-xs shadow-lg">
           {notice}
         </div>
+      )}
+
+      {editServer && (
+        <ServerEditor initial={editServer} t={t} onCancel={() => setEditServer(null)} onSave={handleSaveServer} />
       )}
 
       {editGroup && (

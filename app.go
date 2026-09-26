@@ -162,6 +162,26 @@ func (a *App) EditSubscription(groupID, name, subURL string) error {
 	return err
 }
 
+// SaveProfile stores a server from the editor: a new one when it has no ID
+// yet (added manually), otherwise an update of the existing one.
+func (a *App) SaveProfile(server profile.Server) (profile.Server, error) {
+	server.Name = strings.TrimSpace(server.Name)
+	server.Address = strings.TrimSpace(server.Address)
+	if server.Address == "" {
+		return profile.Server{}, fmt.Errorf("address is required")
+	}
+	if server.Port < 1 || server.Port > 65535 {
+		return profile.Server{}, fmt.Errorf("port must be between 1 and 65535")
+	}
+	if server.Name == "" {
+		server.Name = server.Address
+	}
+	if server.ID == "" {
+		return a.store.Add(server)
+	}
+	return server, a.store.Update(server)
+}
+
 // PingServer measures a server's delay in ms. mode is "tcp", "http" or
 // "real" (a real request through a temporary xray-core instance).
 func (a *App) PingServer(id, mode string) (int, error) {
