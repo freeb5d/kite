@@ -3,6 +3,11 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.12.1 — Fix clipped subscription share menu
+
+The subscription Share menu was cut off by its card (only the first option was visible).
+It now opens above everything else.
+
 ## ✨ v0.12.0 — More subscription formats, share and edit
 
 - **More subscription formats**: besides the base64 link list, Kite now imports Clash/Mihomo

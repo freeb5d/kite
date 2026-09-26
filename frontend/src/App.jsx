@@ -844,15 +844,20 @@ export default function App() {
                       <div className="relative">
                         <button
                           className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
-                          onClick={() => setShareMenuGroup((cur) => (cur === g.id ? null : g.id))}
+                          onClick={(e) => {
+                            const r = e.currentTarget.getBoundingClientRect()
+                            setShareMenuGroup((cur) => (cur?.id === g.id ? null : { id: g.id, x: r.right, y: r.bottom }))
+                          }}
                           title={t('share')}
                         >
                           <Icon path={icons.share} className="w-3.5 h-3.5" />
                         </button>
-                        {shareMenuGroup === g.id && (
+                        {shareMenuGroup?.id === g.id && (
                           <>
                             <div className="fixed inset-0 z-40" onClick={() => setShareMenuGroup(null)} />
-                            <div className="absolute right-0 top-7 z-50 w-48 rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] shadow-lg py-1 text-xs">
+                            <div
+                              style={{ left: shareMenuGroup.x - 192, top: shareMenuGroup.y + 4 }}
+                              className="fixed z-50 w-48 rounded-lg border border-[var(--border)] bg-[var(--bg-panel)] shadow-lg py-1 text-xs">
                               <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)]" onClick={() => handleShareGroup(g, 'url')}>
                                 {t('copySubscriptionUrl')}
                               </button>
