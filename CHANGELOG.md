@@ -3,6 +3,14 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.14.1 — Accurate real delay and connection test
+
+**Real delay** and **Test connection** reported several hundred ms too much: they timed the
+very first request through the server, which is mostly one-off setup (TCP plus the TLS /
+REALITY handshakes to the server and then to the test site). Both now send a warm-up
+request first and report the second one over the already-open connection, so the number
+reflects the actual round trip, comparable with other V2Ray clients.
+
 ## ✨ v0.14.0 — Ping: sort by delay, remove failed servers, test one subscription
 
 - **Sort by delay** — fastest servers first, failed ones last (in the **⋮** menu next to Ping).

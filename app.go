@@ -465,17 +465,23 @@ func (a *App) TestConnection() (TestResult, error) {
 		Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)},
 	}
 
-	start := time.Now()
-	resp, err := client.Get("https://www.cloudflare.com/cdn-cgi/trace")
-	if err != nil {
-		return TestResult{}, fmt.Errorf("request through proxy failed: %w", err)
-	}
-	defer resp.Body.Close()
-	delay := time.Since(start)
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return TestResult{}, fmt.Errorf("read response: %w", err)
+	// Two requests over one kept-alive connection: the first opens the
+	// tunnel (handshakes), the second is the round trip that's reported --
+	// the same way "real delay" is measured.
+	var body []byte
+	var delay time.Duration
+	for i := 0; i < 2; i++ {
+		start := time.Now()
+		resp, err := client.Get("https://www.cloudflare.com/cdn-cgi/trace")
+		if err != nil {
+			return TestResult{}, fmt.Errorf("request through proxy failed: %w", err)
+		}
+		body, err = io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return TestResult{}, fmt.Errorf("read response: %w", err)
+		}
+		delay = time.Since(start)
 	}
 
 	result := TestResult{DelayMs: delay.Milliseconds()}

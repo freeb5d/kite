@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -114,20 +115,32 @@ func realDelay(s profile.Server) (int, error) {
 	defer instance.Close()
 
 	proxyURL, _ := url.Parse("socks5://127.0.0.1:" + strconv.Itoa(port))
-	client := &http.Client{
-		Timeout:   timeout,
-		Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL), DisableKeepAlives: true},
+	return TimeRequest(&http.Transport{Proxy: http.ProxyURL(proxyURL)}, TestURL)
+}
+
+// TimeRequest measures a request's round trip through transport the way
+// most V2Ray clients report "real delay": a first request opens the tunnel
+// (TCP + TLS/REALITY handshakes to the server, then to the test site), and
+// the second one -- reusing that connection -- is what's timed. Timing the
+// first request alone mostly measures one-off handshakes, not latency.
+func TimeRequest(transport *http.Transport, target string) (int, error) {
+	client := &http.Client{Timeout: timeout, Transport: transport}
+	defer transport.CloseIdleConnections()
+	var elapsed int
+	for i := 0; i < 2; i++ {
+		start := time.Now()
+		resp, err := client.Get(target)
+		if err != nil {
+			return 0, err
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode >= 500 {
+			return 0, errors.New(resp.Status)
+		}
+		elapsed = ms(start)
 	}
-	start := time.Now()
-	resp, err := client.Get(TestURL)
-	if err != nil {
-		return 0, err
-	}
-	resp.Body.Close()
-	if resp.StatusCode >= 500 {
-		return 0, errors.New(resp.Status)
-	}
-	return ms(start), nil
+	return elapsed, nil
 }
 
 func freePort() (int, error) {
