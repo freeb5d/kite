@@ -3,9 +3,7 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
-## ✨ v0.14.0 — v2rayNG-style ping: sort, remove failed, test one group
-
-Ping now works like v2rayNG:
+## ✨ v0.14.0 — Ping: sort by delay, remove failed servers, test one subscription
 
 - **Sort by delay** — fastest servers first, failed ones last (in the **⋮** menu next to Ping).
 - **Remove failed servers** — deletes every server that failed the last test, after asking.
@@ -155,7 +153,7 @@ sing-box (for TUN mode) still means 0B/s in that panel.
 ## 🔀 v0.10.0 — Bring back xray-core as a selectable engine (now the default)
 
 The v0.9.0 sing-box migration traded away xray-core's `tcp&headerType=http` transport
-with no replacement -- some servers (the "Ninja-29" report) simply can't be reached
+with no replacement -- servers using it simply can't be reached
 under sing-box at all. Rather than pick one engine's limitations over the other's,
 Kite now embeds both and lets you switch from the About panel: **xray-core is the new
 default** (broader transport support), **sing-box is the only one with TUN mode**
