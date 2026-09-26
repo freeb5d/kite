@@ -27,6 +27,7 @@ import {
   EditSubscription,
   ShareLink,
   ShareSubscription,
+  PingServer,
 } from '../wailsjs/go/main/App'
 
 function errorText(err) {
@@ -107,7 +108,7 @@ function IconButton({ onClick, title, active, children }) {
   )
 }
 
-function ServerRow({ s, isSelected, isRunning, editingId, editingName, setEditingName, onSelect, onStartEdit, onCommitEdit, onCancelEdit, onDelete, onShare, t }) {
+function ServerRow({ s, isSelected, isRunning, editingId, editingName, setEditingName, onSelect, onStartEdit, onCommitEdit, onCancelEdit, onDelete, onShare, ping, t }) {
   const isActive = isSelected && isRunning
   return (
     <div
@@ -143,6 +144,15 @@ function ServerRow({ s, isSelected, isRunning, editingId, editingName, setEditin
             {s.protocol} · {s.address}:{s.port}
           </div>
         </div>
+        {ping !== undefined && (
+          <span
+            className={`shrink-0 text-[11px] font-medium tabular-nums group-hover:hidden ${
+              ping === null ? 'text-[var(--text-faint)]' : ping < 0 ? 'text-[var(--danger)]' : ping < 300 ? 'text-[var(--success)]' : 'text-amber-500'
+            }`}
+          >
+            {ping === null ? '…' : ping < 0 ? t('timeout') : `${ping} ms`}
+          </span>
+        )}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           <button
             className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
@@ -335,6 +345,48 @@ export default function App() {
   const [expandedGroups, setExpandedGroups] = useState(() => new Set())
   const [refreshingGroup, setRefreshingGroup] = useState(null)
   const [shareMenuGroup, setShareMenuGroup] = useState(null)
+  const [pingMode, setPingMode] = useState(() => {
+    try {
+      return localStorage.getItem('kite-ping-mode') || 'tcp'
+    } catch {
+      return 'tcp'
+    }
+  })
+  const [pings, setPings] = useState({}) // id -> ms | -1 (failed) | null (running)
+  const [pinging, setPinging] = useState(false)
+
+  function choosePingMode(m) {
+    setPingMode(m)
+    setPings({})
+    try {
+      localStorage.setItem('kite-ping-mode', m)
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handlePingAll() {
+    const list = filtered
+    setPinging(true)
+    setPings(Object.fromEntries(list.map((s) => [s.id, null])))
+    // Real delay starts an xray-core instance per server, so keep it gentle.
+    const limit = pingMode === 'real' ? 4 : 16
+    let next = 0
+    async function worker() {
+      while (next < list.length) {
+        const s = list[next++]
+        let ms = -1
+        try {
+          ms = await PingServer(s.id, pingMode)
+        } catch {
+          ms = -1
+        }
+        setPings((prev) => ({ ...prev, [s.id]: ms }))
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, list.length) }, worker))
+    setPinging(false)
+  }
   const [editGroup, setEditGroup] = useState(null) // { id, name, url }
   const [notice, setNotice] = useState('')
   const noticeTimer = useRef(null)
@@ -757,6 +809,35 @@ export default function App() {
               </button>
             </div>
 
+            <div className="flex items-center gap-2 mt-3">
+              <div className="flex flex-1 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] p-0.5 text-[11px]">
+                {[
+                  ['tcp', 'TCP'],
+                  ['http', 'HTTP'],
+                  ['real', t('realDelay')],
+                ].map(([m, label]) => (
+                  <button
+                    key={m}
+                    onClick={() => choosePingMode(m)}
+                    disabled={pinging}
+                    className={`flex-1 rounded-md px-2 py-1 transition-colors ${
+                      pingMode === m ? 'bg-[var(--accent)] text-[var(--accent-text)]' : 'text-[var(--text-dim)] hover:text-[var(--text)]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={handlePingAll}
+                disabled={pinging || filtered.length === 0}
+                title={t('pingAll')}
+                className="shrink-0 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] text-[var(--text-dim)] disabled:opacity-50"
+              >
+                {pinging ? t('pinging') : t('pingAll')}
+              </button>
+            </div>
+
             {addOpen && (
               <div className="flex gap-2 mt-3">
                 <input
@@ -798,6 +879,7 @@ export default function App() {
                 onCancelEdit={() => setEditingId(null)}
                 onDelete={(e) => handleDelete(s.id, e)}
                 onShare={(e) => handleShareServer(s.id, e)}
+                ping={pings[s.id]}
                 t={t}
               />
             ))}
@@ -925,6 +1007,7 @@ export default function App() {
                           onCancelEdit={() => setEditingId(null)}
                           onDelete={(e) => handleDelete(s.id, e)}
                           onShare={(e) => handleShareServer(s.id, e)}
+                          ping={pings[s.id]}
                           t={t}
                         />
                       ))}

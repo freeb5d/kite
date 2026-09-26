@@ -20,6 +20,7 @@ import (
 	"github.com/freeb5d/kite/internal/tray"
 	"github.com/freeb5d/kite/internal/update"
 	"github.com/freeb5d/kite/internal/xray"
+	"github.com/freeb5d/kite/pkg/probe"
 	"github.com/freeb5d/kite/pkg/profile"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -159,6 +160,16 @@ func (a *App) EditSubscription(groupID, name, subURL string) error {
 		err = fmt.Errorf("subscription group not found")
 	}
 	return err
+}
+
+// PingServer measures a server's delay in ms. mode is "tcp", "http" or
+// "real" (a real request through a temporary xray-core instance).
+func (a *App) PingServer(id, mode string) (int, error) {
+	server, err := a.store.Get(id)
+	if err != nil {
+		return 0, err
+	}
+	return probe.Ping(server, mode)
 }
 
 // ShareLink returns a server's standard share link (vless://, vmess://,

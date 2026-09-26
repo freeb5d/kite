@@ -11,6 +11,10 @@ export const LANGUAGES = [
 
 const dict = {
   en: {
+    realDelay: "Real delay",
+    pingAll: "Ping",
+    pinging: "Pinging…",
+    timeout: "timeout",
     share: 'Share',
     shareLink: 'Copy share link',
     edit: 'Edit',
@@ -79,6 +83,10 @@ const dict = {
     updateFailed: (msg) => `Update failed: ${msg}`,
   },
   zh: {
+    realDelay: "真实延迟",
+    pingAll: "测速",
+    pinging: "测速中…",
+    timeout: "超时",
     share: '分享',
     shareLink: '复制分享链接',
     edit: '编辑',
@@ -147,6 +155,10 @@ const dict = {
     updateFailed: (msg) => `更新失败：${msg}`,
   },
   fa: {
+    realDelay: "تأخیر واقعی",
+    pingAll: "پینگ",
+    pinging: "در حال پینگ…",
+    timeout: "بدون پاسخ",
     share: 'اشتراک\u200cگذاری',
     shareLink: 'کپی لینک اشتراک\u200cگذاری',
     edit: 'ویرایش',
@@ -215,6 +227,10 @@ const dict = {
     updateFailed: (msg) => `به‌روزرسانی ناموفق بود: ${msg}`,
   },
   tr: {
+    realDelay: "Gerçek gecikme",
+    pingAll: "Ping",
+    pinging: "Ping atılıyor…",
+    timeout: "zaman aşımı",
     share: 'Paylaş',
     shareLink: 'Paylaşım bağlantısını kopyala',
     edit: 'Düzenle',
@@ -283,6 +299,10 @@ const dict = {
     updateFailed: (msg) => `Güncelleme başarısız: ${msg}`,
   },
   ar: {
+    realDelay: "التأخير الحقيقي",
+    pingAll: "قياس",
+    pinging: "جارٍ القياس…",
+    timeout: "انتهت المهلة",
     share: 'مشاركة',
     shareLink: 'نسخ رابط المشاركة',
     edit: 'تعديل',
@@ -351,6 +371,10 @@ const dict = {
     updateFailed: (msg) => `فشل التحديث: ${msg}`,
   },
   fr: {
+    realDelay: "Délai réel",
+    pingAll: "Ping",
+    pinging: "Test en cours…",
+    timeout: "délai dépassé",
     share: 'Partager',
     shareLink: 'Copier le lien de partage',
     edit: 'Modifier',
@@ -419,6 +443,10 @@ const dict = {
     updateFailed: (msg) => `Échec de la mise à jour : ${msg}`,
   },
   de: {
+    realDelay: "Echte Latenz",
+    pingAll: "Ping",
+    pinging: "Pinge…",
+    timeout: "Zeitüberschreitung",
     share: 'Teilen',
     shareLink: 'Freigabelink kopieren',
     edit: 'Bearbeiten',
@@ -487,6 +515,10 @@ const dict = {
     updateFailed: (msg) => `Update fehlgeschlagen: ${msg}`,
   },
   ru: {
+    realDelay: "Реальная задержка",
+    pingAll: "Пинг",
+    pinging: "Пингую…",
+    timeout: "таймаут",
     share: 'Поделиться',
     shareLink: 'Копировать ссылку',
     edit: 'Изменить',

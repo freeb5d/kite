@@ -3,6 +3,21 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## ✨ v0.13.0 — Ping servers: TCP, HTTP or real delay
+
+Under the search box there's now a **TCP · HTTP · Real delay** switch and a **Ping** button;
+every server shows its delay (green under 300 ms, amber above, red when it fails).
+
+- **TCP** — time to open a connection to the server's port. Fastest, but only proves it's
+  reachable.
+- **HTTP** — time until the server answers a plain HTTP request on its port.
+- **Real delay** — starts a temporary xray-core connection through the server and loads a
+  test page (`generate_204`). The only mode that proves the server really works (right keys,
+  transport, encryption).
+
+The measurement code lives in the shared `pkg/probe` package, so the Android app measures
+exactly the same way.
+
 ## 🐛 v0.12.2 — Support VLESS post-quantum encryption
 
 Servers using xray-core's new VLESS encryption (`encryption=mlkem768x25519plus...` in the
