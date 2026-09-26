@@ -3,6 +3,14 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.12.2 — Support VLESS post-quantum encryption
+
+Servers using xray-core's new VLESS encryption (`encryption=mlkem768x25519plus...` in the
+link) rejected every connection, because Kite always sent `encryption: none`. The link's
+`encryption` value is now passed through. The link parser and config builder also moved to
+public `pkg/profile` and `pkg/xrayconf` packages, shared with the new
+[Android app](https://github.com/freeb5d/kite-android).
+
 ## 🐛 v0.12.1 — Fix clipped subscription share menu
 
 The subscription Share menu was cut off by its card (only the first option was visible).

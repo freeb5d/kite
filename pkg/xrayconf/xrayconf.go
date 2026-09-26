@@ -101,7 +101,9 @@ func Outbound(server profile.Server) (map[string]interface{}, error) {
 	case "vless":
 		user := map[string]interface{}{
 			"id":         server.UUID,
-			"encryption": "none",
+			// Usually "none", but servers using xray's post-quantum VLESS
+			// encryption (mlkem768x25519plus...) reject anything else.
+			"encryption": FirstNonEmpty(server.Extra["encryption"], "none"),
 		}
 		if flow := server.Extra["flow"]; flow != "" {
 			user["flow"] = flow
