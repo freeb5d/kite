@@ -12,6 +12,7 @@ package probe
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -52,18 +53,48 @@ func Ping(server profile.Server, mode string) (int, error) {
 	}
 }
 
-func address(s profile.Server) string {
-	return net.JoinHostPort(s.Address, strconv.Itoa(s.Port))
+// address resolves the server's host before any timing starts, so pings
+// measure the network path to the server rather than a DNS lookup.
+func address(s profile.Server) (string, error) {
+	host := s.Address
+	if net.ParseIP(host) == nil {
+		ips, err := net.DefaultResolver.LookupHost(context.Background(), host)
+		if err != nil {
+			return "", err
+		}
+		if len(ips) == 0 {
+			return "", fmt.Errorf("no address for %s", host)
+		}
+		host = ips[0]
+	}
+	return net.JoinHostPort(host, strconv.Itoa(s.Port)), nil
 }
 
+// tcpPing times the TCP handshake to the server. It takes the best of two
+// attempts so a single slow SYN (or a busy radio waking up) doesn't skew it.
 func tcpPing(s profile.Server) (int, error) {
-	start := time.Now()
-	conn, err := net.DialTimeout("tcp", address(s), timeout)
+	addr, err := address(s)
 	if err != nil {
 		return 0, err
 	}
-	conn.Close()
-	return ms(start), nil
+	best := -1
+	var lastErr error
+	for i := 0; i < 2; i++ {
+		start := time.Now()
+		conn, err := net.DialTimeout("tcp", addr, timeout)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		conn.Close()
+		if d := ms(start); best < 0 || d < best {
+			best = d
+		}
+	}
+	if best < 0 {
+		return 0, lastErr
+	}
+	return best, nil
 }
 
 // httpPing sends a minimal HTTP request straight to the server's port and
@@ -72,8 +103,12 @@ func tcpPing(s profile.Server) (int, error) {
 // that only speak TLS answer the plain request with a TLS alert, which also
 // counts.
 func httpPing(s profile.Server) (int, error) {
+	addr, err := address(s)
+	if err != nil {
+		return 0, err
+	}
 	start := time.Now()
-	conn, err := net.DialTimeout("tcp", address(s), timeout)
+	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
 		return 0, err
 	}

@@ -3,6 +3,13 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## ⚡ v0.15.1 — More accurate TCP and HTTP ping
+
+- **TCP / HTTP ping** no longer count the DNS lookup of the server's hostname — the
+  address is resolved first and only the connection itself is timed, so values reflect the
+  real network path (lists where many servers share one hostname were most affected).
+- TCP ping takes the best of two handshakes, so one slow packet doesn't skew the result.
+
 ## ✨ v0.15.0 — Edit servers and add them manually
 
 - **Server editor** — the pencil on a server now opens a full editor instead of just a
