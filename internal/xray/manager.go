@@ -17,8 +17,8 @@ import (
 	// their init() functions -- core.New can't build any of them otherwise.
 	_ "github.com/xtls/xray-core/main/distro/all"
 
-	"github.com/freeb5d/kite/internal/profile"
 	"github.com/freeb5d/kite/internal/system"
+	"github.com/freeb5d/kite/pkg/profile"
 )
 
 type State string

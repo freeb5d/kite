@@ -57,7 +57,7 @@ jobs:
         run: go mod tidy
 
       - name: Run tests
-        run: go test ./internal/profile/...
+        run: go test ./pkg/...
 
       - name: Install frontend dependencies
         working-directory: frontend

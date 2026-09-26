@@ -16,11 +16,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/freeb5d/kite/internal/profile"
 	"github.com/freeb5d/kite/internal/system"
 	"github.com/freeb5d/kite/internal/tray"
 	"github.com/freeb5d/kite/internal/update"
 	"github.com/freeb5d/kite/internal/xray"
+	"github.com/freeb5d/kite/pkg/profile"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
