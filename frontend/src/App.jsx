@@ -1167,13 +1167,13 @@ export default function App() {
               </div>
             )}
             {addOpen && (
-              <div className="flex items-center gap-1.5 mt-2 text-[11px] text-[var(--text-faint)]">
-                {t('addManually')}:
+              <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[11px] text-[var(--text-faint)]">
+                <span className="w-full">{t('addManually')}:</span>
                 {['vless', 'vmess', 'trojan', 'shadowsocks', 'hysteria2', 'ssh'].map((proto) => (
                   <button
                     key={proto}
                     className="rounded border border-[var(--border)] px-1.5 py-0.5 hover:bg-[var(--bg-hover)] text-[var(--text-dim)]"
-                    onClick={() => setEditServer({ id: '', name: '', protocol: proto, address: '', port: 443, extra: {} })}
+                    onClick={() => setEditServer({ id: '', name: '', protocol: proto, address: '', port: proto === 'ssh' ? 22 : 443, extra: {} })}
                   >
                     {proto === 'shadowsocks' ? 'ss' : proto}
                   </button>

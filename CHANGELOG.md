@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.17.1 — Tidier "Add manually" row
+
+- The protocol buttons under "Add manually" wrap onto a new line instead of being cut
+  off at the edge of the sidebar.
+- A new SSH server starts on port 22.
+
 ## 🔐 v0.17.0 — SSH servers
 
 - **SSH** — use any SSH server as a proxy, like `ssh -D`: password or private key (with
