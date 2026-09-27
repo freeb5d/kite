@@ -38,7 +38,7 @@ Jede Plattform wird als einzelne portable ausführbare Datei ausgeliefert — ke
 
 ## Funktionen
 
-- **Linkformate**: `vmess://`, `vless://`, `trojan://`, `ss://` — Freigabelink einfügen, wird geparst und gespeichert
+- **Linkformate**: `vmess://`, `vless://`, `trojan://`, `ss://`, `hysteria2://` — Freigabelink einfügen, wird geparst und gespeichert
 - **Abonnement-URLs** — füge einen `http(s)://`-Abonnementlink ein (das base64-Linklisten-Format, das V2RayN/V2RayNG/Shadowrocket verwenden), und jeder darin enthaltene Server wird auf einmal importiert, zusammengefasst in einer einklappbaren Gruppe in der Liste (ein Abonnement kann Hunderte von Servern enthalten). Die Gruppe zeigt Tarif-/Traffic-/Ablaufinformationen an, wenn der Anbieter sie meldet (über den `Subscription-Userinfo`-Header oder die gefälschten „info“-Einträge, die manche Anbieter in die Linkliste mischen), und hat einen eigenen Sync-Button, um ihre Server erneut abzurufen und zu aktualisieren
 - **xray-core**, als Go-Bibliothek eingebettet (keine ausgelagerte Binärdatei) — volle Kontrolle über den Lebenszyklus und echte Traffic-Statistiken, kein Parsen von stdout
 - **Transporte**: TCP (inklusive xray-cores `headerType=http`-Tarnung), WebSocket und gRPC, mit TLS/REALITY-Sicherheitserkennung direkt aus dem Link

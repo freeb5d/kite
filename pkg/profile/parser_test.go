@@ -141,3 +141,27 @@ func withInternal(e map[string]string) map[string]string {
 	e["subURL"] = "https://secret.example/sub"
 	return e
 }
+
+func TestHysteria2Link(t *testing.T) {
+	s, err := ParseLink("hysteria2://p%40ss@example.com:443,20000-30000/?sni=cdn.example.com&obfs=salamander&obfs-password=x&insecure=1#My%20HY2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Protocol != "hysteria2" || s.Address != "example.com" || s.Port != 443 || s.Password != "p@ss" || s.Name != "My HY2" {
+		t.Fatalf("unexpected %+v", s)
+	}
+	if s.Extra["mport"] != "443,20000-30000" || s.Extra["obfs"] != "salamander" || s.Extra["sni"] != "cdn.example.com" {
+		t.Fatalf("unexpected extra %+v", s.Extra)
+	}
+	link, err := ShareLink(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	back, err := ParseLink(link)
+	if err != nil || back.Password != s.Password || back.Port != 443 || back.Extra["obfs-password"] != "x" {
+		t.Fatalf("round trip %q -> %+v %v", link, back, err)
+	}
+	if hy, err := ParseLink("hy2://secret@1.2.3.4:8443#x"); err != nil || hy.Port != 8443 || hy.Password != "secret" {
+		t.Fatalf("hy2: %+v %v", hy, err)
+	}
+}

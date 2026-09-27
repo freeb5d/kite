@@ -135,6 +135,15 @@ func Outbound(server profile.Server) (map[string]interface{}, error) {
 				"password": server.Password,
 			}},
 		}
+	case "hysteria2":
+		outbound["protocol"] = "hysteria"
+		outbound["settings"] = map[string]interface{}{
+			"version": 2,
+			"address": server.Address,
+			"port":    server.Port,
+		}
+		outbound["streamSettings"] = hysteriaStreamJSON(server)
+		return outbound, nil
 	default:
 		return nil, fmt.Errorf("unsupported protocol %q", server.Protocol)
 	}
@@ -229,6 +238,51 @@ func realitySettingsJSON(server profile.Server) map[string]interface{} {
 		reality["spiderX"] = spx
 	}
 	return reality
+}
+
+// hysteriaStreamJSON is Hysteria2 over QUIC: always TLS (ALPN h3), with
+// optional Salamander obfuscation and UDP port hopping, which xray-core
+// configures through finalmask.
+func hysteriaStreamJSON(server profile.Server) map[string]interface{} {
+	e := server.Extra
+	tls := map[string]interface{}{
+		"serverName": FirstNonEmpty(e["sni"], e["peer"], server.Address),
+		"alpn":       []string{"h3"},
+	}
+	if alpn := e["alpn"]; alpn != "" {
+		tls["alpn"] = strings.Split(alpn, ",")
+	}
+	if e["insecure"] == "1" || e["insecure"] == "true" || e["allowInsecure"] == "1" {
+		tls["allowInsecure"] = true
+	}
+	if pin := e["pinSHA256"]; pin != "" {
+		tls["pinnedPeerCertSha256"] = pin
+	}
+	stream := map[string]interface{}{
+		"network":     "hysteria",
+		"security":    "tls",
+		"tlsSettings": tls,
+		"hysteriaSettings": map[string]interface{}{
+			"version": 2,
+			"auth":    server.Password,
+		},
+	}
+	mask := map[string]interface{}{}
+	if e["obfs"] == "salamander" {
+		mask["udp"] = []map[string]interface{}{{
+			"type":     "salamander",
+			"settings": map[string]interface{}{"password": e["obfs-password"]},
+		}}
+	}
+	if ports := e["mport"]; ports != "" {
+		mask["quicParams"] = map[string]interface{}{
+			"udpHop": map[string]interface{}{"ports": ports},
+		}
+	}
+	if len(mask) > 0 {
+		stream["finalmask"] = mask
+	}
+	return stream
 }
 
 // FirstNonEmpty returns the first non-empty value.

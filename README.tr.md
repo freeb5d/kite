@@ -38,7 +38,7 @@ Her platform tek bir taşınabilir yürütülebilir dosya olarak sunulur — kur
 
 ## Özellikler
 
-- **Bağlantı biçimleri**: `vmess://`, `vless://`, `trojan://`, `ss://` — bir paylaşım bağlantısı yapıştırın, ayrıştırılıp kaydedilsin
+- **Bağlantı biçimleri**: `vmess://`, `vless://`, `trojan://`, `ss://`, `hysteria2://` — bir paylaşım bağlantısı yapıştırın, ayrıştırılıp kaydedilsin
 - **Abonelik URL'leri** — bir `http(s)://` abonelik bağlantısı yapıştırın (V2RayN/V2RayNG/Shadowrocket'ın kullandığı base64 bağlantı listesi biçimi) ve içerdiği tüm sunucular tek seferde içe aktarılır, listede tek bir daraltılabilir grupta toplanır (bir abonelik yüzlerce sunucu içerebilir). Sağlayıcı bunu bildirdiğinde (`Subscription-Userinfo` başlığı üzerinden veya bazı sağlayıcıların bağlantı listesine karıştırdığı sahte "info" girdileri üzerinden) grup, plan/trafik/son kullanma bilgisini gösterir ve sunucularını yeniden çekip yenilemek için kendi senkronizasyon düğmesine sahiptir
 - **xray-core**, Go kütüphanesi olarak gömülü (dışarıya çağrılan bir ikili dosya değil) — tam yaşam döngüsü kontrolü ve gerçek trafik istatistikleri, stdout ayrıştırmaya gerek yok
 - **Taşıma yöntemleri**: TCP (xray-core'un `headerType=http` gizlemesi dahil), WebSocket ve gRPC; TLS/REALITY güvenliği doğrudan bağlantıdan algılanır

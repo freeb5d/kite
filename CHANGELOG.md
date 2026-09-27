@@ -3,6 +3,15 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🚀 v0.16.0 — Hysteria2 support
+
+- **Hysteria2** — `hysteria2://` and `hy2://` links now import and connect, including
+  Salamander obfuscation, port hopping (`443,20000-30000`), custom SNI, insecure mode and
+  certificate pinning. Hysteria2 servers also load from Clash, sing-box and Xray JSON
+  subscriptions.
+- The server editor supports Hysteria2, and it can be added manually.
+- Pinging a Hysteria2 server always measures real delay, since it runs over UDP (QUIC).
+
 ## ⚡ v0.15.1 — More accurate TCP and HTTP ping
 
 - **TCP / HTTP ping** no longer count the DNS lookup of the server's hostname — the

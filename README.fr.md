@@ -38,7 +38,7 @@ Chaque plateforme est livrée sous forme d'un seul exécutable portable — pas 
 
 ## Fonctionnalités
 
-- **Formats de lien** : `vmess://`, `vless://`, `trojan://`, `ss://` — collez un lien de partage et il est analysé et enregistré
+- **Formats de lien** : `vmess://`, `vless://`, `trojan://`, `ss://`, `hysteria2://` — collez un lien de partage et il est analysé et enregistré
 - **URL d'abonnement** — collez un lien d'abonnement `http(s)://` (le format de liste de liens en base64 utilisé par V2RayN/V2RayNG/Shadowrocket) et tous les serveurs qu'il contient sont importés d'un coup, regroupés dans un groupe repliable unique de la liste (un abonnement peut contenir des centaines de serveurs). Le groupe affiche les infos de forfait/trafic/expiration lorsque le fournisseur les communique (via l'en-tête `Subscription-Userinfo`, ou les fausses entrées « info » que certains fournisseurs mélangent dans la liste de liens), et possède son propre bouton de synchronisation pour récupérer et actualiser ses serveurs
 - **xray-core**, embarqué comme bibliothèque Go (et non un binaire externe) — contrôle complet du cycle de vie et vraies statistiques de trafic, sans analyser la sortie standard
 - **Transports** : TCP (y compris le déguisement `headerType=http` de xray-core), WebSocket et gRPC, avec détection de sécurité TLS/REALITY directement depuis le lien

@@ -241,6 +241,10 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
     // Drop empty extras so share links stay clean.
     const extra = Object.fromEntries(Object.entries(s.extra).filter(([, v]) => v !== '' && v !== undefined))
     if (extra.security === 'none') delete extra.security
+    if (s.protocol === 'hysteria2') {
+      delete extra.type
+      delete extra.security
+    }
     try {
       await onSave({ ...s, port: Number(s.port) || 0, extra })
     } catch (ex) {
@@ -281,6 +285,18 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
             </>
           )}
           {s.protocol === 'trojan' && text(t('password'), s.password, (v) => set('password', v))}
+          {s.protocol === 'hysteria2' && (
+            <>
+              {text(t('password'), s.password, (v) => set('password', v))}
+              {text(t('portHopping'), e.mport, (v) => setX('mport', v), '20000-30000')}
+              {section(t('security'))}
+              {text(t('sni'), e.sni, (v) => setX('sni', v))}
+              {select(t('allowInsecure'), e.insecure === '1' ? 'true' : 'false', ['false', 'true'], (v) => setX('insecure', v === 'true' ? '1' : ''))}
+              {text(t('pinSHA256'), e.pinSHA256, (v) => setX('pinSHA256', v))}
+              {select(t('obfs'), e.obfs || '', ['', 'salamander'], (v) => setX('obfs', v))}
+              {e.obfs === 'salamander' && text(t('obfsPassword'), e['obfs-password'], (v) => setX('obfs-password', v))}
+            </>
+          )}
           {s.protocol === 'shadowsocks' && (
             <>
               {select(t('method'), s.method || 'aes-256-gcm', SS_METHODS, (v) => set('method', v))}
@@ -288,7 +304,7 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
             </>
           )}
 
-          {s.protocol !== 'shadowsocks' && (
+          {s.protocol !== 'shadowsocks' && s.protocol !== 'hysteria2' && (
             <>
               {section(t('transport'))}
               {select(t('network'), e.type, ['tcp', 'ws', 'grpc'], (v) => setX('type', v))}
@@ -1138,7 +1154,7 @@ export default function App() {
             {addOpen && (
               <div className="flex items-center gap-1.5 mt-2 text-[11px] text-[var(--text-faint)]">
                 {t('addManually')}:
-                {['vless', 'vmess', 'trojan', 'shadowsocks'].map((proto) => (
+                {['vless', 'vmess', 'trojan', 'shadowsocks', 'hysteria2'].map((proto) => (
                   <button
                     key={proto}
                     className="rounded border border-[var(--border)] px-1.5 py-0.5 hover:bg-[var(--bg-hover)] text-[var(--text-dim)]"

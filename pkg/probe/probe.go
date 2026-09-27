@@ -43,6 +43,11 @@ const (
 
 // Ping returns the delay to server in milliseconds using mode.
 func Ping(server profile.Server, mode string) (int, error) {
+	// Hysteria2 runs over UDP (QUIC): there's no TCP port to probe, so every
+	// mode measures a real request.
+	if server.Protocol == "hysteria2" {
+		mode = ModeReal
+	}
 	switch mode {
 	case ModeHTTP:
 		return httpPing(server)

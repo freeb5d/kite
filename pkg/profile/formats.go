@@ -136,6 +136,19 @@ func fromClash(p map[string]any) (Server, error) {
 	typ := str(p, "type")
 	switch typ {
 	case "vmess", "vless", "trojan", "ss":
+	case "hysteria2":
+		s := newServer(str(p, "name"), "hysteria2", str(p, "server"), str(p, "port"))
+		s.Password = str(p, "password")
+		e := s.Extra
+		setIf(e, "sni", str(p, "sni"))
+		setIf(e, "alpn", list(p, "alpn"))
+		setIf(e, "obfs", str(p, "obfs"))
+		setIf(e, "obfs-password", str(p, "obfs-password"))
+		setIf(e, "mport", str(p, "ports"))
+		if truthy(p, "skip-cert-verify") {
+			e["insecure"] = "1"
+		}
+		return s, nil
 	default:
 		return Server{}, fmt.Errorf("%s: unsupported Clash proxy type %q", str(p, "name"), typ)
 	}
@@ -182,6 +195,21 @@ func fromSingBox(o map[string]any) (Server, error) {
 	typ := str(o, "type")
 	switch typ {
 	case "vmess", "vless", "trojan", "shadowsocks":
+	case "hysteria2":
+		s := newServer(str(o, "tag"), "hysteria2", str(o, "server"), str(o, "server_port"))
+		s.Password = str(o, "password")
+		e := s.Extra
+		tls := sub(o, "tls")
+		setIf(e, "sni", str(tls, "server_name"))
+		setIf(e, "alpn", list(tls, "alpn"))
+		if truthy(tls, "insecure") {
+			e["insecure"] = "1"
+		}
+		obfs := sub(o, "obfs")
+		setIf(e, "obfs", str(obfs, "type"))
+		setIf(e, "obfs-password", str(obfs, "password"))
+		setIf(e, "mport", strings.ReplaceAll(list(o, "server_ports"), ":", "-"))
+		return s, nil
 	case "direct", "block", "dns", "selector", "urltest":
 		return Server{}, errSkip
 	default:
@@ -229,6 +257,29 @@ func fromXray(o map[string]any) (Server, error) {
 	case "trojan", "shadowsocks":
 		target = firstOf(settings, "servers")
 		user = target
+	case "hysteria":
+		stream := sub(o, "streamSettings")
+		s := newServer(str(o, "tag"), "hysteria2", str(settings, "address"), str(settings, "port"))
+		s.Password = str(sub(stream, "hysteriaSettings"), "auth")
+		e := s.Extra
+		tls := sub(stream, "tlsSettings")
+		setIf(e, "sni", str(tls, "serverName"))
+		setIf(e, "alpn", list(tls, "alpn"))
+		setIf(e, "pinSHA256", str(tls, "pinnedPeerCertSha256"))
+		if truthy(tls, "allowInsecure") {
+			e["insecure"] = "1"
+		}
+		fm := sub(stream, "finalmask")
+		if udp, ok := fm["udp"].([]any); ok {
+			for _, m := range udp {
+				if mm, ok := m.(map[string]any); ok && str(mm, "type") == "salamander" {
+					e["obfs"] = "salamander"
+					setIf(e, "obfs-password", str(sub(mm, "settings"), "password"))
+				}
+			}
+		}
+		setIf(e, "mport", str(sub(sub(fm, "quicParams"), "udpHop"), "ports"))
+		return s, nil
 	case "freedom", "blackhole", "dns":
 		return Server{}, errSkip
 	default:
