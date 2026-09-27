@@ -72,9 +72,13 @@ func TestParseClashYAML(t *testing.T) {
     type: hysteria2
     server: x
     port: 1
+  - name: tuic
+    type: tuic
+    server: x
+    port: 1
 `
 	servers, _, errs := ParseSubscription(body)
-	if len(servers) != 2 || len(errs) != 1 {
+	if len(servers) != 3 || len(errs) != 1 {
 		t.Fatalf("got %d servers, %d errs: %+v %v", len(servers), len(errs), servers, errs)
 	}
 	v := servers[0]
@@ -83,6 +87,9 @@ func TestParseClashYAML(t *testing.T) {
 	}
 	if servers[1].Method != "aes-128-gcm" || servers[1].Protocol != "shadowsocks" {
 		t.Fatalf("bad ss: %+v", servers[1])
+	}
+	if servers[2].Protocol != "hysteria2" {
+		t.Fatalf("bad hysteria2: %+v", servers[2])
 	}
 }
 

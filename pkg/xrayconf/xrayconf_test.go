@@ -35,7 +35,7 @@ func TestVLESSEncryption(t *testing.T) {
 
 func TestHysteria2Outbound(t *testing.T) {
 	s := profile.Server{Protocol: "hysteria2", Address: "example.com", Port: 443, Password: "pw",
-		Extra: map[string]string{"obfs": "salamander", "obfs-password": "x", "mport": "20000-30000", "insecure": "1"}}
+		Extra: map[string]string{"obfs": "salamander", "obfs-password": "x", "mport": "20000-30000"}}
 	cfg, err := Build(s, Options{SOCKSPort: 1080})
 	if err != nil {
 		t.Fatal(err)

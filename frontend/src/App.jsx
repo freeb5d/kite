@@ -291,7 +291,6 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
               {text(t('portHopping'), e.mport, (v) => setX('mport', v), '20000-30000')}
               {section(t('security'))}
               {text(t('sni'), e.sni, (v) => setX('sni', v))}
-              {select(t('allowInsecure'), e.insecure === '1' ? 'true' : 'false', ['false', 'true'], (v) => setX('insecure', v === 'true' ? '1' : ''))}
               {text(t('pinSHA256'), e.pinSHA256, (v) => setX('pinSHA256', v))}
               {select(t('obfs'), e.obfs || '', ['', 'salamander'], (v) => setX('obfs', v))}
               {e.obfs === 'salamander' && text(t('obfsPassword'), e['obfs-password'], (v) => setX('obfs-password', v))}

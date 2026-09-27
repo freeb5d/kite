@@ -252,9 +252,8 @@ func hysteriaStreamJSON(server profile.Server) map[string]interface{} {
 	if alpn := e["alpn"]; alpn != "" {
 		tls["alpn"] = strings.Split(alpn, ",")
 	}
-	if e["insecure"] == "1" || e["insecure"] == "true" || e["allowInsecure"] == "1" {
-		tls["allowInsecure"] = true
-	}
+	// xray-core no longer supports allowInsecure; a self-signed server
+	// is trusted by pinning its certificate instead.
 	if pin := e["pinSHA256"]; pin != "" {
 		tls["pinnedPeerCertSha256"] = pin
 	}
