@@ -311,6 +311,7 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
               {section(t('security'))}
               {text(t('sni'), e.sni, (v) => setX('sni', v))}
               {text(t('pinSHA256'), e.pinSHA256, (v) => setX('pinSHA256', v))}
+              {text(t('ech'), e.ech, (v) => setX('ech', v))}
               {select(t('obfs'), e.obfs || '', ['', 'salamander'], (v) => setX('obfs', v))}
               {e.obfs === 'salamander' && text(t('obfsPassword'), e['obfs-password'], (v) => setX('obfs-password', v))}
             </>
@@ -373,6 +374,7 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
                 </>
               )}
               {e.security === 'tls' && text(t('alpn'), e.alpn, (v) => setX('alpn', v), 'h2,http/1.1')}
+              {e.security === 'tls' && text(t('ech'), e.ech, (v) => setX('ech', v), 'cloudflare-ech.com+https://1.1.1.1/dns-query')}
               {e.security === 'reality' && (
                 <>
                   {text(t('publicKey'), e.pbk, (v) => setX('pbk', v))}

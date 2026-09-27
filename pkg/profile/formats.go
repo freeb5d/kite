@@ -315,6 +315,7 @@ func fromXray(o map[string]any) (Server, error) {
 		setIf(e, "sni", str(tls, "serverName"))
 		setIf(e, "alpn", list(tls, "alpn"))
 		setIf(e, "fp", str(tls, "fingerprint"))
+		setIf(e, "ech", str(tls, "echConfigList"))
 	case "reality":
 		e["security"] = "reality"
 		r := sub(stream, "realitySettings")
@@ -347,6 +348,17 @@ func fromXray(o map[string]any) (Server, error) {
 	setIf(e, "seed", str(kcp, "seed"))
 	if h := str(sub(kcp, "header"), "type"); h != "" && h != "none" {
 		e["headerType"] = h
+	}
+	if udp, ok := sub(stream, "finalmask")["udp"].([]any); ok {
+		for _, m := range udp {
+			mm, _ := m.(map[string]any)
+			switch typ := str(mm, "type"); {
+			case typ == "mkcp-aes128gcm":
+				setIf(e, "seed", str(sub(mm, "settings"), "password"))
+			case strings.HasPrefix(typ, "header-"):
+				e["headerType"] = strings.TrimPrefix(typ, "header-")
+			}
+		}
 	}
 	if header := sub(sub(stream, "tcpSettings"), "header"); str(header, "type") == "http" {
 		e["headerType"] = "http"

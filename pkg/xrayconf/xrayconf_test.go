@@ -72,6 +72,7 @@ func TestTransports(t *testing.T) {
 		{"type": "kcp", "seed": "s", "headerType": "wechat-video"},
 		{"type": "kcp"},
 		{"type": "grpc", "serviceName": "svc", "mode": "multi", "security": "tls"},
+		{"type": "ws", "security": "tls", "sni": "a.example", "ech": "cloudflare-ech.com+https://1.1.1.1/dns-query"},
 	} {
 		s := profile.Server{Protocol: "vless", Address: "example.com", Port: 443, UUID: "b831381d-6324-4d53-ad4f-8cda48b30811", Extra: extra}
 		cfg, err := Build(s, Options{SOCKSPort: 1080})

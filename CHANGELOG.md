@@ -9,6 +9,8 @@ All notable changes to Kite are documented here. Versions correspond to
   advanced JSON options) and h2. xray-core no longer ships the plain HTTP/2 transport, so
   h2 servers are connected over XHTTP's HTTP/2 stream mode.
 - gRPC gains multi mode and authority.
+- **ECH** (Encrypted Client Hello) for TLS and Hysteria2 servers — hides the real site name
+  from network filters. Set it in the editor or via the `ech` link parameter.
 - Share links and Clash, sing-box and Xray subscriptions using these transports import
   correctly, and all of them can be set in the server editor.
 

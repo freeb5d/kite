@@ -11,6 +11,7 @@ export const LANGUAGES = [
 
 const dict = {
   en: {
+    ech: "ECH (Encrypted Client Hello)",
     mode: "Mode",
     xhttpExtra: "XHTTP extra (JSON)",
     seed: "mKCP seed",
@@ -128,6 +129,7 @@ const dict = {
     updateFailed: (msg) => `Update failed: ${msg}`,
   },
   zh: {
+    ech: "ECH（加密 Client Hello）",
     mode: "模式",
     xhttpExtra: "XHTTP 额外参数 (JSON)",
     seed: "mKCP 种子",
@@ -245,6 +247,7 @@ const dict = {
     updateFailed: (msg) => `更新失败：${msg}`,
   },
   fa: {
+    ech: "ECH (رمزگذاری Client Hello)",
     mode: "حالت",
     xhttpExtra: "تنظیمات اضافی XHTTP (JSON)",
     seed: "Seed در mKCP",
@@ -362,6 +365,7 @@ const dict = {
     updateFailed: (msg) => `به‌روزرسانی ناموفق بود: ${msg}`,
   },
   tr: {
+    ech: "ECH (Şifreli Client Hello)",
     mode: "Mod",
     xhttpExtra: "XHTTP ek ayarları (JSON)",
     seed: "mKCP seed",
@@ -479,6 +483,7 @@ const dict = {
     updateFailed: (msg) => `Güncelleme başarısız: ${msg}`,
   },
   ar: {
+    ech: "ECH (تشفير Client Hello)",
     mode: "الوضع",
     xhttpExtra: "إعدادات XHTTP الإضافية (JSON)",
     seed: "بذرة mKCP",
@@ -596,6 +601,7 @@ const dict = {
     updateFailed: (msg) => `فشل التحديث: ${msg}`,
   },
   fr: {
+    ech: "ECH (Client Hello chiffré)",
     mode: "Mode",
     xhttpExtra: "Options XHTTP (JSON)",
     seed: "Graine mKCP",
@@ -713,6 +719,7 @@ const dict = {
     updateFailed: (msg) => `Échec de la mise à jour : ${msg}`,
   },
   de: {
+    ech: "ECH (verschlüsseltes Client Hello)",
     mode: "Modus",
     xhttpExtra: "XHTTP-Extras (JSON)",
     seed: "mKCP-Seed",
@@ -830,6 +837,7 @@ const dict = {
     updateFailed: (msg) => `Update fehlgeschlagen: ${msg}`,
   },
   ru: {
+    ech: "ECH (шифрование Client Hello)",
     mode: "Режим",
     xhttpExtra: "Доп. параметры XHTTP (JSON)",
     seed: "Seed mKCP",

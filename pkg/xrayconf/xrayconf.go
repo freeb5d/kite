@@ -234,14 +234,18 @@ func streamSettingsJSON(server profile.Server) map[string]interface{} {
 		stream["xhttpSettings"] = xh
 	case "kcp", "mkcp":
 		stream["network"] = "kcp"
-		kcp := map[string]interface{}{}
+		stream["kcpSettings"] = map[string]interface{}{}
+		// xray-core moved mKCP's seed and header disguise into finalmask:
+		// the seed becomes mkcp-aes128gcm (no seed = mkcp-original) and
+		// headerType becomes a header-* UDP mask.
+		masks := []map[string]interface{}{{"type": "mkcp-original"}}
 		if seed := server.Extra["seed"]; seed != "" {
-			kcp["seed"] = seed
+			masks[0] = map[string]interface{}{"type": "mkcp-aes128gcm", "settings": map[string]interface{}{"password": seed}}
 		}
-		if h := server.Extra["headerType"]; h != "" && h != "none" {
-			kcp["header"] = map[string]interface{}{"type": h}
+		if h := kcpHeaderMask(server.Extra["headerType"]); h != "" {
+			masks = append(masks, map[string]interface{}{"type": h})
 		}
-		stream["kcpSettings"] = kcp
+		stream["finalmask"] = map[string]interface{}{"udp": masks}
 	default:
 		stream["network"] = "tcp"
 		// headerType=http disguises a raw TCP connection as a plaintext
@@ -290,6 +294,7 @@ func tlsSettingsJSON(server profile.Server) map[string]interface{} {
 	if fp := server.Extra["fp"]; fp != "" {
 		tls["fingerprint"] = fp
 	}
+	addECH(tls, server)
 	return tls
 }
 
@@ -312,6 +317,16 @@ func realitySettingsJSON(server profile.Server) map[string]interface{} {
 	return reality
 }
 
+func kcpHeaderMask(h string) string {
+	switch h {
+	case "srtp", "utp", "dtls", "wireguard", "dns":
+		return "header-" + h
+	case "wechat-video", "wechat":
+		return "header-wechat"
+	}
+	return ""
+}
+
 // hysteriaStreamJSON is Hysteria2 over QUIC: always TLS (ALPN h3), with
 // optional Salamander obfuscation and UDP port hopping, which xray-core
 // configures through finalmask.
@@ -329,6 +344,7 @@ func hysteriaStreamJSON(server profile.Server) map[string]interface{} {
 	if pin := e["pinSHA256"]; pin != "" {
 		tls["pinnedPeerCertSha256"] = pin
 	}
+	addECH(tls, server)
 	stream := map[string]interface{}{
 		"network":     "hysteria",
 		"security":    "tls",
@@ -354,6 +370,18 @@ func hysteriaStreamJSON(server profile.Server) map[string]interface{} {
 		stream["finalmask"] = mask
 	}
 	return stream
+}
+
+// addECH enables Encrypted Client Hello, which hides the real SNI. The
+// "ech" value is either a base64 ECHConfigList or a domain plus DNS server
+// to fetch it from (e.g. "cloudflare-ech.com+https://1.1.1.1/dns-query").
+func addECH(tls map[string]interface{}, server profile.Server) {
+	if ech := server.Extra["ech"]; ech != "" {
+		tls["echConfigList"] = ech
+		if force := server.Extra["echForceQuery"]; force != "" {
+			tls["echForceQuery"] = force
+		}
+	}
 }
 
 // FirstNonEmpty returns the first non-empty value.
