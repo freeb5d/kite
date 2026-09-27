@@ -20,14 +20,29 @@ type Options struct {
 	TUNName   string // TUN adapter name (desktop); ignored on Android
 	LogPath   string // xray error/debug log file; empty = stderr
 	LogLevel  string // xray loglevel; default "debug"
+
+	// SSHBridgePort is the local SOCKS port of a running sshbridge.Bridge;
+	// required for "ssh" servers, which xray-core can't speak itself.
+	SSHBridgePort int
 }
 
 // Build returns an xray-core JSON config for server. The proxy outbound is
 // tagged "proxy" and its traffic counters are registered as
 // "outbound>>>proxy>>>traffic>>>uplink"/"downlink" in xray's stats.Manager.
 func Build(server profile.Server, o Options) ([]byte, error) {
-	outbound, err := Outbound(server)
-	if err != nil {
+	var outbound map[string]interface{}
+	var err error
+	if server.Protocol == "ssh" {
+		if o.SSHBridgePort == 0 {
+			return nil, fmt.Errorf("ssh server needs a running SSH bridge")
+		}
+		outbound = map[string]interface{}{
+			"tag": "proxy", "protocol": "socks",
+			"settings": map[string]interface{}{
+				"servers": []map[string]interface{}{{"address": "127.0.0.1", "port": o.SSHBridgePort}},
+			},
+		}
+	} else if outbound, err = Outbound(server); err != nil {
 		return nil, err
 	}
 
@@ -77,6 +92,19 @@ func Build(server profile.Server, o Options) ([]byte, error) {
 			},
 		},
 		"stats": map[string]interface{}{},
+	}
+	if server.Protocol == "ssh" {
+		// SSH carries TCP only, so plain UDP DNS (e.g. from the TUN) is
+		// answered by xray's DNS module, which asks 1.1.1.1 over TCP
+		// through the tunnel.
+		config["outbounds"] = append(config["outbounds"].([]map[string]interface{}),
+			map[string]interface{}{"tag": "dns-out", "protocol": "dns"})
+		config["dns"] = map[string]interface{}{"servers": []string{"tcp://1.1.1.1", "tcp://8.8.8.8"}}
+		config["routing"] = map[string]interface{}{
+			"rules": []map[string]interface{}{
+				{"type": "field", "network": "udp", "port": "53", "outboundTag": "dns-out"},
+			},
+		}
 	}
 	return json.Marshal(config)
 }

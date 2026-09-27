@@ -11,6 +11,10 @@ export const LANGUAGES = [
 
 const dict = {
   en: {
+    username: "Username",
+    privateKey: "Private key",
+    keyPassphrase: "Key passphrase",
+    hostKey: "Host key (optional)",
     portHopping: "Port hopping",
     allowInsecure: "Allow insecure",
     pinSHA256: "Certificate pin (SHA-256)",
@@ -120,6 +124,10 @@ const dict = {
     updateFailed: (msg) => `Update failed: ${msg}`,
   },
   zh: {
+    username: "用户名",
+    privateKey: "私钥",
+    keyPassphrase: "私钥密码",
+    hostKey: "主机密钥（可选）",
     portHopping: "端口跳跃",
     allowInsecure: "允许不安全连接",
     pinSHA256: "证书固定 (SHA-256)",
@@ -229,6 +237,10 @@ const dict = {
     updateFailed: (msg) => `更新失败：${msg}`,
   },
   fa: {
+    username: "نام کاربری",
+    privateKey: "کلید خصوصی",
+    keyPassphrase: "رمز کلید",
+    hostKey: "کلید میزبان (اختیاری)",
     portHopping: "پرش پورت",
     allowInsecure: "اجازهٔ اتصال ناامن",
     pinSHA256: "پین گواهی (SHA-256)",
@@ -338,6 +350,10 @@ const dict = {
     updateFailed: (msg) => `به‌روزرسانی ناموفق بود: ${msg}`,
   },
   tr: {
+    username: "Kullanıcı adı",
+    privateKey: "Özel anahtar",
+    keyPassphrase: "Anahtar parolası",
+    hostKey: "Sunucu anahtarı (isteğe bağlı)",
     portHopping: "Port atlama",
     allowInsecure: "Güvensize izin ver",
     pinSHA256: "Sertifika sabitleme (SHA-256)",
@@ -447,6 +463,10 @@ const dict = {
     updateFailed: (msg) => `Güncelleme başarısız: ${msg}`,
   },
   ar: {
+    username: "اسم المستخدم",
+    privateKey: "المفتاح الخاص",
+    keyPassphrase: "عبارة مرور المفتاح",
+    hostKey: "مفتاح المضيف (اختياري)",
     portHopping: "تنقّل المنافذ",
     allowInsecure: "السماح بالاتصال غير الآمن",
     pinSHA256: "تثبيت الشهادة (SHA-256)",
@@ -556,6 +576,10 @@ const dict = {
     updateFailed: (msg) => `فشل التحديث: ${msg}`,
   },
   fr: {
+    username: "Nom d’utilisateur",
+    privateKey: "Clé privée",
+    keyPassphrase: "Phrase secrète de la clé",
+    hostKey: "Clé d’hôte (facultatif)",
     portHopping: "Saut de ports",
     allowInsecure: "Autoriser non sécurisé",
     pinSHA256: "Épinglage du certificat (SHA-256)",
@@ -665,6 +689,10 @@ const dict = {
     updateFailed: (msg) => `Échec de la mise à jour : ${msg}`,
   },
   de: {
+    username: "Benutzername",
+    privateKey: "Privater Schlüssel",
+    keyPassphrase: "Schlüssel-Passphrase",
+    hostKey: "Host-Schlüssel (optional)",
     portHopping: "Port-Hopping",
     allowInsecure: "Unsicher erlauben",
     pinSHA256: "Zertifikat-Pin (SHA-256)",
@@ -774,6 +802,10 @@ const dict = {
     updateFailed: (msg) => `Update fehlgeschlagen: ${msg}`,
   },
   ru: {
+    username: "Имя пользователя",
+    privateKey: "Закрытый ключ",
+    keyPassphrase: "Пароль ключа",
+    hostKey: "Ключ хоста (необязательно)",
     portHopping: "Смена портов",
     allowInsecure: "Разрешить небезопасное",
     pinSHA256: "Пин сертификата (SHA-256)",

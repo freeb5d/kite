@@ -172,3 +172,18 @@ func TestHysteria2Link(t *testing.T) {
 		t.Fatalf("hy2: %+v %v", hy, err)
 	}
 }
+
+func TestSSHLink(t *testing.T) {
+	s, err := ParseLink("ssh://admin:p%40ss@1.2.3.4:2222?hk=SHA256:abc#Home")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Protocol != "ssh" || s.Port != 2222 || s.Password != "p@ss" || s.Extra["user"] != "admin" || s.Extra["hk"] != "SHA256:abc" || s.Name != "Home" {
+		t.Fatalf("unexpected %+v", s)
+	}
+	link, _ := ShareLink(s)
+	back, err := ParseLink(link)
+	if err != nil || back.Password != "p@ss" || back.Extra["user"] != "admin" || back.Port != 2222 {
+		t.Fatalf("round trip %q -> %+v %v", link, back, err)
+	}
+}

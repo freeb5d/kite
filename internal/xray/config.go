@@ -57,13 +57,14 @@ func LogFilePath() string {
 	return filepath.Join(logDir, "xray.log")
 }
 
-func buildJSON(server profile.Server, mode Mode, tunName string) ([]byte, error) {
+func buildJSON(server profile.Server, mode Mode, tunName string, sshBridgePort int) ([]byte, error) {
 	return xrayconf.Build(server, xrayconf.Options{
-		HTTPPort:  HTTPInboundPort,
-		SOCKSPort: SOCKSInboundPort,
-		TUN:       mode == ModeTUN,
-		TUNName:   tunName,
-		LogPath:   LogFilePath(),
+		HTTPPort:      HTTPInboundPort,
+		SOCKSPort:     SOCKSInboundPort,
+		TUN:           mode == ModeTUN,
+		TUNName:       tunName,
+		LogPath:       LogFilePath(),
+		SSHBridgePort: sshBridgePort,
 	})
 }
 

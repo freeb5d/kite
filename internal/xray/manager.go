@@ -19,6 +19,7 @@ import (
 
 	"github.com/freeb5d/kite/internal/system"
 	"github.com/freeb5d/kite/pkg/profile"
+	"github.com/freeb5d/kite/pkg/sshbridge"
 )
 
 type State string
@@ -52,6 +53,7 @@ type Manager struct {
 	tunSeq          int
 	uplinkCounter   stats.Counter
 	downlinkCounter stats.Counter
+	sshBridge       *sshbridge.Bridge
 }
 
 func NewManager() *Manager {
@@ -101,7 +103,26 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 	tunName := fmt.Sprintf("kite-tun-%d", m.tunSeq)
 	tunAddr := TUNAddress(m.tunSeq)
 
-	configBytes, err := buildJSON(server, mode, tunName)
+	// SSH servers go through a local SOCKS-to-SSH bridge; it dials the
+	// (already pinned) server address, which the exception route covers.
+	bridgePort := 0
+	if server.Protocol == "ssh" {
+		bridge, err := sshbridge.Start(server)
+		if err != nil {
+			return err
+		}
+		m.sshBridge = bridge
+		bridgePort = bridge.Port
+	}
+	started := false
+	defer func() {
+		if !started {
+			m.sshBridge.Close()
+			m.sshBridge = nil
+		}
+	}()
+
+	configBytes, err := buildJSON(server, mode, tunName, bridgePort)
 	if err != nil {
 		return err
 	}
@@ -152,6 +173,7 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 	}
 
 	m.instance = instance
+	started = true
 	m.uplinkCounter, m.downlinkCounter = nil, nil
 	if sm, ok := instance.GetFeature(stats.ManagerType()).(stats.Manager); ok && sm != nil {
 		m.uplinkCounter = getOrRegisterCounter(sm, "outbound>>>proxy>>>traffic>>>uplink")
@@ -232,6 +254,8 @@ func (m *Manager) Stop() error {
 		err = m.instance.Close()
 		m.instance = nil
 	}
+	m.sshBridge.Close()
+	m.sshBridge = nil
 	m.removeRoutes()
 	m.uplinkCounter, m.downlinkCounter = nil, nil
 	m.status = Status{State: StateStopped}

@@ -241,7 +241,7 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
     // Drop empty extras so share links stay clean.
     const extra = Object.fromEntries(Object.entries(s.extra).filter(([, v]) => v !== '' && v !== undefined))
     if (extra.security === 'none') delete extra.security
-    if (s.protocol === 'hysteria2') {
+    if (s.protocol === 'hysteria2' || s.protocol === 'ssh') {
       delete extra.type
       delete extra.security
     }
@@ -285,6 +285,22 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
             </>
           )}
           {s.protocol === 'trojan' && text(t('password'), s.password, (v) => set('password', v))}
+          {s.protocol === 'ssh' && (
+            <>
+              {text(t('username'), e.user, (v) => setX('user', v), 'root')}
+              {text(t('password'), s.password, (v) => set('password', v))}
+              <Field label={t('privateKey')}>
+                <textarea
+                  className={inputClass + ' font-mono text-[11px] h-20'}
+                  value={e.pk ?? ''}
+                  placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                  onChange={(ev) => setX('pk', ev.target.value)}
+                />
+              </Field>
+              {e.pk && text(t('keyPassphrase'), e.pp, (v) => setX('pp', v))}
+              {text(t('hostKey'), e.hk, (v) => setX('hk', v), 'SHA256:…')}
+            </>
+          )}
           {s.protocol === 'hysteria2' && (
             <>
               {text(t('password'), s.password, (v) => set('password', v))}
@@ -303,7 +319,7 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
             </>
           )}
 
-          {s.protocol !== 'shadowsocks' && s.protocol !== 'hysteria2' && (
+          {!['shadowsocks', 'hysteria2', 'ssh'].includes(s.protocol) && (
             <>
               {section(t('transport'))}
               {select(t('network'), e.type, ['tcp', 'ws', 'grpc'], (v) => setX('type', v))}
@@ -1153,7 +1169,7 @@ export default function App() {
             {addOpen && (
               <div className="flex items-center gap-1.5 mt-2 text-[11px] text-[var(--text-faint)]">
                 {t('addManually')}:
-                {['vless', 'vmess', 'trojan', 'shadowsocks', 'hysteria2'].map((proto) => (
+                {['vless', 'vmess', 'trojan', 'shadowsocks', 'hysteria2', 'ssh'].map((proto) => (
                   <button
                     key={proto}
                     className="rounded border border-[var(--border)] px-1.5 py-0.5 hover:bg-[var(--bg-hover)] text-[var(--text-dim)]"

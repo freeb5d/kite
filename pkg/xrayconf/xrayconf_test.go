@@ -48,3 +48,18 @@ func TestHysteria2Outbound(t *testing.T) {
 		t.Fatalf("core.New: %v\n%s", err, cfg)
 	}
 }
+
+func TestSSHConfig(t *testing.T) {
+	s := profile.Server{Protocol: "ssh", Address: "1.2.3.4", Port: 22, Password: "pw"}
+	cfg, err := Build(s, Options{SOCKSPort: 1080, TUN: false, SSHBridgePort: 5555})
+	if err != nil {
+		t.Fatal(err)
+	}
+	config, err := serial.LoadJSONConfig(bytes.NewReader(cfg))
+	if err != nil {
+		t.Fatalf("xray rejected config: %v\n%s", err, cfg)
+	}
+	if _, err := core.New(config); err != nil {
+		t.Fatalf("core.New: %v\n%s", err, cfg)
+	}
+}

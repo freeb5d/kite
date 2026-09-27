@@ -28,6 +28,8 @@ func ShareLink(s Server) (string, error) {
 		return u.String(), nil
 	case "hysteria2":
 		return hysteria2Link(s), nil
+	case "ssh":
+		return sshLink(s), nil
 	case "shadowsocks":
 		creds := base64.RawURLEncoding.EncodeToString([]byte(s.Method + ":" + s.Password))
 		return "ss://" + creds + "@" + hostport + "#" + url.PathEscape(s.Name), nil

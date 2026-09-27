@@ -27,6 +27,7 @@ import (
 	_ "github.com/xtls/xray-core/main/distro/all"
 
 	"github.com/freeb5d/kite/pkg/profile"
+	"github.com/freeb5d/kite/pkg/sshbridge"
 	"github.com/freeb5d/kite/pkg/xrayconf"
 )
 
@@ -136,7 +137,16 @@ func realDelay(s profile.Server) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	cfg, err := xrayconf.Build(s, xrayconf.Options{SOCKSPort: port, LogLevel: "none"})
+	opts := xrayconf.Options{SOCKSPort: port, LogLevel: "none"}
+	if s.Protocol == "ssh" {
+		bridge, err := sshbridge.Start(s)
+		if err != nil {
+			return 0, err
+		}
+		defer bridge.Close()
+		opts.SSHBridgePort = bridge.Port
+	}
+	cfg, err := xrayconf.Build(s, opts)
 	if err != nil {
 		return 0, err
 	}

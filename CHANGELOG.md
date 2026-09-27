@@ -3,6 +3,15 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🔐 v0.17.0 — SSH servers
+
+- **SSH** — use any SSH server as a proxy, like `ssh -D`: password or private key (with
+  optional passphrase), and optional host-key verification (`SHA256:…` fingerprint or
+  public key). Works in proxy and TUN mode; DNS is resolved over TCP through the tunnel.
+- `ssh://user:password@host:port#name` links import and share; SSH servers can be added
+  manually and edited.
+- SSH carries TCP only — apps that try UDP (e.g. QUIC) fall back to TCP automatically.
+
 ## 🚀 v0.16.0 — Hysteria2 support
 
 - **Hysteria2** — `hysteria2://` and `hy2://` links now import and connect, including
