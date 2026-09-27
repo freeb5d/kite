@@ -197,7 +197,51 @@ func streamSettingsJSON(server profile.Server) map[string]interface{} {
 		if svc := FirstNonEmpty(server.Extra["serviceName"], server.Extra["path"]); svc != "" {
 			grpc["serviceName"] = svc
 		}
+		if server.Extra["mode"] == "multi" {
+			grpc["multiMode"] = true
+		}
+		if a := server.Extra["authority"]; a != "" {
+			grpc["authority"] = a
+		}
 		stream["grpcSettings"] = grpc
+	case "httpupgrade":
+		hu := map[string]interface{}{"path": FirstNonEmpty(server.Extra["path"], "/")}
+		if host := server.Extra["host"]; host != "" {
+			hu["host"] = host
+		}
+		stream["httpupgradeSettings"] = hu
+	case "xhttp", "splithttp", "h2", "http":
+		// xray-core dropped the plain HTTP/2 transport; XHTTP in stream-one
+		// mode is its replacement, so h2 servers are carried over XHTTP.
+		stream["network"] = "xhttp"
+		xh := map[string]interface{}{
+			"path": FirstNonEmpty(server.Extra["path"], "/"),
+			"mode": FirstNonEmpty(server.Extra["mode"], "auto"),
+		}
+		if network == "h2" || network == "http" {
+			xh["mode"] = "stream-one"
+		}
+		if host := server.Extra["host"]; host != "" {
+			xh["host"] = host
+		}
+		// Share links carry advanced XHTTP options as a JSON "extra" param.
+		if raw := server.Extra["extra"]; raw != "" {
+			var extra map[string]interface{}
+			if json.Unmarshal([]byte(raw), &extra) == nil {
+				xh["extra"] = extra
+			}
+		}
+		stream["xhttpSettings"] = xh
+	case "kcp", "mkcp":
+		stream["network"] = "kcp"
+		kcp := map[string]interface{}{}
+		if seed := server.Extra["seed"]; seed != "" {
+			kcp["seed"] = seed
+		}
+		if h := server.Extra["headerType"]; h != "" && h != "none" {
+			kcp["header"] = map[string]interface{}{"type": h}
+		}
+		stream["kcpSettings"] = kcp
 	default:
 		stream["network"] = "tcp"
 		// headerType=http disguises a raw TCP connection as a plaintext

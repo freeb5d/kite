@@ -3,6 +3,15 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🧩 v0.18.0 — More transports
+
+- **New transports**: mKCP (with header type and seed), HTTPUpgrade, XHTTP (mode and
+  advanced JSON options) and h2. xray-core no longer ships the plain HTTP/2 transport, so
+  h2 servers are connected over XHTTP's HTTP/2 stream mode.
+- gRPC gains multi mode and authority.
+- Share links and Clash, sing-box and Xray subscriptions using these transports import
+  correctly, and all of them can be set in the server editor.
+
 ## 🐛 v0.17.1 — Tidier "Add manually" row
 
 - The protocol buttons under "Add manually" wrap onto a new line instead of being cut

@@ -185,6 +185,16 @@ func fromClash(p map[string]any) (Server, error) {
 		setIf(e, "host", str(sub(ws, "headers"), "Host", "host"))
 	case "grpc":
 		setIf(e, "serviceName", str(sub(p, "grpc-opts"), "grpc-service-name"))
+	case "h2":
+		h2 := sub(p, "h2-opts")
+		setIf(e, "path", str(h2, "path"))
+		setIf(e, "host", list(h2, "host"))
+	case "http":
+		e["type"] = "tcp"
+		e["headerType"] = "http"
+		h := sub(p, "http-opts")
+		setIf(e, "path", list(h, "path"))
+		setIf(e, "host", list(sub(h, "headers"), "Host"))
 	}
 	return s, nil
 }
@@ -240,6 +250,7 @@ func fromSingBox(o map[string]any) (Server, error) {
 		setIf(e, "path", str(tr, "path"))
 		setIf(e, "host", str(sub(tr, "headers"), "Host", "host"))
 		setIf(e, "serviceName", str(tr, "service_name"))
+		setIf(e, "host", list(tr, "host"))
 	}
 	return s, nil
 }
@@ -316,7 +327,27 @@ func fromXray(o map[string]any) (Server, error) {
 	ws := sub(stream, "wsSettings")
 	setIf(e, "path", str(ws, "path"))
 	setIf(e, "host", str(sub(ws, "headers"), "Host", "host"))
-	setIf(e, "serviceName", str(sub(stream, "grpcSettings"), "serviceName"))
+	grpc := sub(stream, "grpcSettings")
+	setIf(e, "serviceName", str(grpc, "serviceName"))
+	if truthy(grpc, "multiMode") {
+		e["mode"] = "multi"
+	}
+	for _, key := range []string{"httpupgradeSettings", "xhttpSettings", "splithttpSettings"} {
+		t := sub(stream, key)
+		setIf(e, "path", str(t, "path"))
+		setIf(e, "host", str(t, "host"))
+		setIf(e, "mode", str(t, "mode"))
+		if x := sub(t, "extra"); len(x) > 0 {
+			if b, err := json.Marshal(x); err == nil {
+				e["extra"] = string(b)
+			}
+		}
+	}
+	kcp := sub(stream, "kcpSettings")
+	setIf(e, "seed", str(kcp, "seed"))
+	if h := str(sub(kcp, "header"), "type"); h != "" && h != "none" {
+		e["headerType"] = h
+	}
 	if header := sub(sub(stream, "tcpSettings"), "header"); str(header, "type") == "http" {
 		e["headerType"] = "http"
 	}

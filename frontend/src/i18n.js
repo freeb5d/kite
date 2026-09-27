@@ -11,6 +11,10 @@ export const LANGUAGES = [
 
 const dict = {
   en: {
+    mode: "Mode",
+    xhttpExtra: "XHTTP extra (JSON)",
+    seed: "mKCP seed",
+    authority: "Authority",
     username: "Username",
     privateKey: "Private key",
     keyPassphrase: "Key passphrase",
@@ -124,6 +128,10 @@ const dict = {
     updateFailed: (msg) => `Update failed: ${msg}`,
   },
   zh: {
+    mode: "模式",
+    xhttpExtra: "XHTTP 额外参数 (JSON)",
+    seed: "mKCP 种子",
+    authority: "Authority",
     username: "用户名",
     privateKey: "私钥",
     keyPassphrase: "私钥密码",
@@ -237,6 +245,10 @@ const dict = {
     updateFailed: (msg) => `更新失败：${msg}`,
   },
   fa: {
+    mode: "حالت",
+    xhttpExtra: "تنظیمات اضافی XHTTP (JSON)",
+    seed: "Seed در mKCP",
+    authority: "Authority",
     username: "نام کاربری",
     privateKey: "کلید خصوصی",
     keyPassphrase: "رمز کلید",
@@ -350,6 +362,10 @@ const dict = {
     updateFailed: (msg) => `به‌روزرسانی ناموفق بود: ${msg}`,
   },
   tr: {
+    mode: "Mod",
+    xhttpExtra: "XHTTP ek ayarları (JSON)",
+    seed: "mKCP seed",
+    authority: "Authority",
     username: "Kullanıcı adı",
     privateKey: "Özel anahtar",
     keyPassphrase: "Anahtar parolası",
@@ -463,6 +479,10 @@ const dict = {
     updateFailed: (msg) => `Güncelleme başarısız: ${msg}`,
   },
   ar: {
+    mode: "الوضع",
+    xhttpExtra: "إعدادات XHTTP الإضافية (JSON)",
+    seed: "بذرة mKCP",
+    authority: "Authority",
     username: "اسم المستخدم",
     privateKey: "المفتاح الخاص",
     keyPassphrase: "عبارة مرور المفتاح",
@@ -576,6 +596,10 @@ const dict = {
     updateFailed: (msg) => `فشل التحديث: ${msg}`,
   },
   fr: {
+    mode: "Mode",
+    xhttpExtra: "Options XHTTP (JSON)",
+    seed: "Graine mKCP",
+    authority: "Authority",
     username: "Nom d’utilisateur",
     privateKey: "Clé privée",
     keyPassphrase: "Phrase secrète de la clé",
@@ -689,6 +713,10 @@ const dict = {
     updateFailed: (msg) => `Échec de la mise à jour : ${msg}`,
   },
   de: {
+    mode: "Modus",
+    xhttpExtra: "XHTTP-Extras (JSON)",
+    seed: "mKCP-Seed",
+    authority: "Authority",
     username: "Benutzername",
     privateKey: "Privater Schlüssel",
     keyPassphrase: "Schlüssel-Passphrase",
@@ -802,6 +830,10 @@ const dict = {
     updateFailed: (msg) => `Update fehlgeschlagen: ${msg}`,
   },
   ru: {
+    mode: "Режим",
+    xhttpExtra: "Доп. параметры XHTTP (JSON)",
+    seed: "Seed mKCP",
+    authority: "Authority",
     username: "Имя пользователя",
     privateKey: "Закрытый ключ",
     keyPassphrase: "Пароль ключа",

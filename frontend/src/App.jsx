@@ -182,6 +182,9 @@ function ServerRow({ s, isSelected, isRunning, editingId, editingName, setEditin
   )
 }
 
+const NETWORKS = ['tcp', 'kcp', 'ws', 'httpupgrade', 'xhttp', 'h2', 'grpc']
+const XHTTP_MODES = ['auto', 'packet-up', 'stream-up', 'stream-one']
+const KCP_HEADERS = ['none', 'srtp', 'utp', 'wechat-video', 'dtls', 'wireguard', 'dns']
 const FINGERPRINTS = ['', 'chrome', 'firefox', 'safari', 'ios', 'android', 'edge', '360', 'qq', 'random', 'randomized']
 const SS_METHODS = [
   'aes-128-gcm', 'aes-256-gcm', 'chacha20-poly1305', 'chacha20-ietf-poly1305', 'xchacha20-poly1305',
@@ -322,15 +325,44 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
           {!['shadowsocks', 'hysteria2', 'ssh'].includes(s.protocol) && (
             <>
               {section(t('transport'))}
-              {select(t('network'), e.type, ['tcp', 'ws', 'grpc'], (v) => setX('type', v))}
+              {select(t('network'), e.type, NETWORKS, (v) => {
+                setX('type', v)
+                setX('headerType', '')
+                setX('mode', '')
+              })}
               {e.type === 'tcp' && select(t('headerType'), e.headerType || 'none', ['none', 'http'], (v) => setX('headerType', v === 'none' ? '' : v))}
-              {(e.type === 'ws' || (e.type === 'tcp' && e.headerType === 'http')) && (
+              {(['ws', 'httpupgrade', 'xhttp', 'h2'].includes(e.type) || (e.type === 'tcp' && e.headerType === 'http')) && (
                 <>
                   {text(t('hostHeader'), e.host, (v) => setX('host', v))}
                   {text(t('path'), e.path, (v) => setX('path', v), '/')}
                 </>
               )}
-              {e.type === 'grpc' && text(t('serviceName'), e.serviceName, (v) => setX('serviceName', v))}
+              {e.type === 'xhttp' && (
+                <>
+                  {select(t('mode'), e.mode || 'auto', XHTTP_MODES, (v) => setX('mode', v === 'auto' ? '' : v))}
+                  <Field label={t('xhttpExtra')}>
+                    <textarea
+                      className={inputClass + ' font-mono text-[11px] h-16'}
+                      value={e.extra ?? ''}
+                      placeholder='{"xPaddingBytes":"100-1000"}'
+                      onChange={(ev) => setX('extra', ev.target.value)}
+                    />
+                  </Field>
+                </>
+              )}
+              {e.type === 'kcp' && (
+                <>
+                  {select(t('headerType'), e.headerType || 'none', KCP_HEADERS, (v) => setX('headerType', v === 'none' ? '' : v))}
+                  {text(t('seed'), e.seed, (v) => setX('seed', v))}
+                </>
+              )}
+              {e.type === 'grpc' && (
+                <>
+                  {text(t('serviceName'), e.serviceName, (v) => setX('serviceName', v))}
+                  {select(t('mode'), e.mode || 'gun', ['gun', 'multi'], (v) => setX('mode', v === 'gun' ? '' : v))}
+                  {text(t('authority'), e.authority, (v) => setX('authority', v))}
+                </>
+              )}
 
               {section(t('security'))}
               {select(t('security'), e.security, ['none', 'tls', 'reality'], (v) => setX('security', v))}
