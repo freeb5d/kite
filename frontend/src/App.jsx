@@ -1402,7 +1402,7 @@ export default function App() {
         </section>
 
         {/* Connect panel */}
-        <main className="flex-1 flex flex-col items-center justify-center gap-6 p-8 relative overflow-y-auto">
+        <main className="flex-1 flex flex-col items-center gap-6 p-8 relative overflow-y-auto [&>*]:shrink-0 [&>:first-child]:mt-auto [&>:last-child]:mb-auto">
           <div className="text-center">
             <div className="text-sm text-[var(--text-dim)]">{selected ? selected.name : t('noServerSelected')}</div>
             {selected && (

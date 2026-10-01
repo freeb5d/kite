@@ -3,6 +3,11 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.19.1 — Connection panel layout
+
+- The connection panel scrolls when its content doesn't fit, instead of squashing the
+  connect button into an oval and cutting off the live/total traffic panel.
+
 ## 🗺️ v0.19.0 — Connection map
 
 - **Test connection** now shows a map zoomed onto the country your traffic exits from, with
