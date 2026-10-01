@@ -11,6 +11,7 @@ export const LANGUAGES = [
 
 const dict = {
   en: {
+    yourIp: "Your IP",
     ech: "ECH (Encrypted Client Hello)",
     mode: "Mode",
     xhttpExtra: "XHTTP extra (JSON)",
@@ -129,6 +130,7 @@ const dict = {
     updateFailed: (msg) => `Update failed: ${msg}`,
   },
   zh: {
+    yourIp: "你的 IP",
     ech: "ECH（加密 Client Hello）",
     mode: "模式",
     xhttpExtra: "XHTTP 额外参数 (JSON)",
@@ -247,6 +249,7 @@ const dict = {
     updateFailed: (msg) => `更新失败：${msg}`,
   },
   fa: {
+    yourIp: "آی‌پی شما",
     ech: "ECH (رمزگذاری Client Hello)",
     mode: "حالت",
     xhttpExtra: "تنظیمات اضافی XHTTP (JSON)",
@@ -365,6 +368,7 @@ const dict = {
     updateFailed: (msg) => `به‌روزرسانی ناموفق بود: ${msg}`,
   },
   tr: {
+    yourIp: "IP adresiniz",
     ech: "ECH (Şifreli Client Hello)",
     mode: "Mod",
     xhttpExtra: "XHTTP ek ayarları (JSON)",
@@ -483,6 +487,7 @@ const dict = {
     updateFailed: (msg) => `Güncelleme başarısız: ${msg}`,
   },
   ar: {
+    yourIp: "عنوان IP الخاص بك",
     ech: "ECH (تشفير Client Hello)",
     mode: "الوضع",
     xhttpExtra: "إعدادات XHTTP الإضافية (JSON)",
@@ -601,6 +606,7 @@ const dict = {
     updateFailed: (msg) => `فشل التحديث: ${msg}`,
   },
   fr: {
+    yourIp: "Votre IP",
     ech: "ECH (Client Hello chiffré)",
     mode: "Mode",
     xhttpExtra: "Options XHTTP (JSON)",
@@ -719,6 +725,7 @@ const dict = {
     updateFailed: (msg) => `Échec de la mise à jour : ${msg}`,
   },
   de: {
+    yourIp: "Deine IP",
     ech: "ECH (verschlüsseltes Client Hello)",
     mode: "Modus",
     xhttpExtra: "XHTTP-Extras (JSON)",
@@ -837,6 +844,7 @@ const dict = {
     updateFailed: (msg) => `Update fehlgeschlagen: ${msg}`,
   },
   ru: {
+    yourIp: "Ваш IP",
     ech: "ECH (шифрование Client Hello)",
     mode: "Режим",
     xhttpExtra: "Доп. параметры XHTTP (JSON)",

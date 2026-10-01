@@ -3,6 +3,13 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🗺️ v0.19.0 — Connection map
+
+- **Test connection** now shows a map zoomed onto the country your traffic exits from, with
+  that country highlighted, next to a card with its flag, name, your IP and the delay.
+  The map is built in (Natural Earth, public domain), so it works offline and in every
+  theme.
+
 ## 🧩 v0.18.0 — More transports
 
 - **New transports**: mKCP (with header type and seed), HTTPUpgrade, XHTTP (mode and

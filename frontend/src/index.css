@@ -50,6 +50,10 @@
   --success: #34d399;
   --success-bg: #0f2b22;
   --success-border: #065f46;
+  --map-sea: #0d1420;
+  --map-land: #263042;
+  --map-border: #0d1420;
+  --map-highlight-border: #c7d2fe;
 }
 
 [data-theme='light'] {
@@ -71,6 +75,10 @@
   --success: #059669;
   --success-bg: #ecfdf5;
   --success-border: #a7f3d0;
+  --map-sea: #e8eef7;
+  --map-land: #c5cfdd;
+  --map-border: #e8eef7;
+  --map-highlight-border: #312e81;
 }
 
 html,
