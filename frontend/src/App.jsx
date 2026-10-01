@@ -1525,7 +1525,8 @@ export default function App() {
             )}
             {testResult && testResult.ok && (
               <WorldMap country={testResult.country}>
-                <div className="absolute end-2 top-1/2 -translate-y-1/2 rounded-lg bg-[var(--bg-panel)] border border-[var(--border)] px-3 py-2 text-xs shadow-lg max-w-[60%]">
+                {(cardOnLeft) => (
+                <div className={`absolute ${cardOnLeft ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 rounded-lg bg-[var(--bg-panel)] border border-[var(--border)] px-3 py-2 text-xs shadow-lg max-w-[60%]`}>
                   <div className="flex items-center gap-1.5 font-semibold text-[var(--text)]">
                     {testResult.country && (
                       <img
@@ -1541,6 +1542,7 @@ export default function App() {
                   <div className="font-mono text-[var(--accent-hover)] break-all">{testResult.ip}</div>
                   <div className="mt-0.5 text-[var(--success)]">{testResult.delayMs} ms</div>
                 </div>
+                )}
               </WorldMap>
             )}
             {testResult && !testResult.ok && (

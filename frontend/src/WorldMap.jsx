@@ -32,21 +32,26 @@ function mainBox(code) {
 
 const ASPECT = 2.2
 
-/** Map zoomed onto `country`, which is highlighted; `children` overlay it. */
+/**
+ * Map zoomed onto `country`, which is highlighted. `children(cardOnLeft)`
+ * renders the overlay: the card goes left when the country ends up on the
+ * right (e.g. Australia or Japan, at the map's edge), so it never covers it.
+ */
 export default function WorldMap({ country, children }) {
   const code = (country || '').toUpperCase()
-  const viewBox = useMemo(() => {
+  const [viewBox, cardOnLeft] = useMemo(() => {
     const b = mainBox(code)
-    if (!b) return `0 0 ${map.w} ${map.w / ASPECT}`
+    if (!b) return [`0 0 ${map.w} ${map.w / ASPECT}`, false]
     const cw = b.x1 - b.x0, ch = b.y1 - b.y0
-    const w = Math.min(map.w, Math.max(cw * 3.2, ch * 3.2 * ASPECT, 240))
+    const w = Math.min(map.w, Math.max(cw * 3.2, ch * 2 * ASPECT, 240))
     const h = w / ASPECT
     // Keep the country left of centre: the info card sits on the right.
     const cx = (b.x0 + b.x1) / 2 + w * 0.16
     const cy = (b.y0 + b.y1) / 2
     const x = Math.max(0, Math.min(map.w - w, cx - w / 2))
     const y = Math.max(0, Math.min(map.h - h, cy - h / 2))
-    return `${x} ${y} ${w} ${h}`
+    const countryX = ((b.x0 + b.x1) / 2 - x) / w
+    return [`${x} ${y} ${w} ${h}`, countryX > 0.5]
   }, [code])
   const stroke = useMemo(() => Number(viewBox.split(' ')[2]) / 700, [viewBox])
 
@@ -60,7 +65,7 @@ export default function WorldMap({ country, children }) {
           <path d={paths[code]} fill="var(--accent)" stroke="var(--map-highlight-border)" strokeWidth={stroke * 2.5} />
         )}
       </svg>
-      {children}
+      {children(cardOnLeft)}
     </div>
   )
 }

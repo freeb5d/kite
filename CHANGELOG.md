@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🗺️ v0.19.3 — Map fix for countries at the edge
+
+- The info card on the connection map moves to the left when the country is on the right
+  (Australia, Japan, New Zealand…), so it no longer hides the highlighted country.
+- Tall countries are zoomed in closer.
+
 ## 🏳️ v0.19.2 — Flags for every country, switch servers in one click
 
 - Country flags are now built into the app, so every country shows its flag — they no
