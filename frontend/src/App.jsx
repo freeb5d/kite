@@ -54,9 +54,6 @@ function openExternal(url) {
   }
 }
 
-// Windows' emoji font (Segoe UI Emoji) doesn't render regional-indicator
-// flag emoji -- it falls back to showing the two letters instead. Use an
-// actual flag image so this looks right cross-platform.
 function countryName(code, lang) {
   if (!code) return ''
   try {
@@ -66,9 +63,13 @@ function countryName(code, lang) {
   }
 }
 
+// Flags ship with the app (flag-icons, MIT): Windows has no flag emoji, and
+// a remote image can fail to load while the tunnel is coming up.
+const FLAGS = import.meta.glob('/node_modules/flag-icons/flags/4x3/*.svg', { eager: true, query: '?url', import: 'default' })
+
 function flagIconUrl(countryCode) {
   if (!countryCode || countryCode.length !== 2) return ''
-  return `https://flagcdn.com/24x18/${countryCode.toLowerCase()}.png`
+  return FLAGS[`/node_modules/flag-icons/flags/4x3/${countryCode.toLowerCase()}.svg`] || ''
 }
 
 function Icon({ path, className = 'w-5 h-5' }) {
@@ -872,6 +873,26 @@ export default function App() {
     }
   }
 
+  // Picking another server while connected switches the connection to it.
+  async function selectServer(id) {
+    setSelectedId(id)
+    if (!isRunning || pending || id === selectedId) return
+    setError('')
+    setTestResult(null)
+    setPending(true)
+    try {
+      await Disconnect()
+      await Connect(id, mode, killSwitch)
+      setStatus(await Status())
+      handleTest()
+    } catch (err) {
+      setError(errorText(err))
+      setStatus(await Status().catch(() => ({ state: 'stopped' })))
+    } finally {
+      setPending(false)
+    }
+  }
+
   async function handleToggle() {
     setError('')
     setTestResult(null)
@@ -1241,7 +1262,7 @@ export default function App() {
                 editingId={editingId}
                 editingName={editingName}
                 setEditingName={setEditingName}
-                onSelect={() => setSelectedId(s.id)}
+                onSelect={() => selectServer(s.id)}
                 onStartEdit={(e) => {
                   e.stopPropagation()
                   setEditServer(s)
@@ -1380,7 +1401,7 @@ export default function App() {
                           editingId={editingId}
                           editingName={editingName}
                           setEditingName={setEditingName}
-                          onSelect={() => setSelectedId(s.id)}
+                          onSelect={() => selectServer(s.id)}
                           onStartEdit={(e) => {
                             e.stopPropagation()
                             setEditServer(s)

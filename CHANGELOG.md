@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🏳️ v0.19.2 — Flags for every country, switch servers in one click
+
+- Country flags are now built into the app, so every country shows its flag — they no
+  longer depend on downloading an image while the connection is coming up.
+- Clicking another server while connected switches the connection to it right away.
+
 ## 🐛 v0.19.1 — Connection panel layout
 
 - The connection panel scrolls when its content doesn't fit, instead of squashing the
