@@ -393,6 +393,18 @@ function ServerEditor({ initial, onSave, onCancel, t }) {
                   {text(t('spiderX'), e.spx, (v) => setX('spx', v), '/')}
                 </>
               )}
+
+              {section(t('muxFragment'))}
+              {select(t('mux'), e.mux === '1' ? 'on' : 'off', ['off', 'on'], (v) => setX('mux', v === 'on' ? '1' : ''))}
+              {e.mux === '1' && text(t('muxConcurrency'), e.muxConcurrency, (v) => setX('muxConcurrency', v.replace(/\D/g, '')), '8')}
+              {select(t('fragment'), e.fragment === '1' ? 'on' : 'off', ['off', 'on'], (v) => setX('fragment', v === 'on' ? '1' : ''))}
+              {e.fragment === '1' && (
+                <>
+                  {text(t('fragmentPackets'), e.fragmentPackets, (v) => setX('fragmentPackets', v), 'tlshello')}
+                  {text(t('fragmentLength'), e.fragmentLength, (v) => setX('fragmentLength', v), '100-200')}
+                  {text(t('fragmentInterval'), e.fragmentInterval, (v) => setX('fragmentInterval', v), '10-20')}
+                </>
+              )}
             </>
           )}
           {err && <p className="text-xs text-[var(--danger)]">{err}</p>}
@@ -454,6 +466,20 @@ export default function App() {
       return false
     }
   })
+  const [syncOnStart, setSyncOnStart] = useState(() => {
+    try {
+      return localStorage.getItem('kite-sync-start') !== '0'
+    } catch {
+      return true
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem('kite-sync-start', syncOnStart ? '1' : '0')
+    } catch {
+      // ignore (private browsing / storage disabled)
+    }
+  }, [syncOnStart])
   const [lang, setLang] = useState(() => {
     try {
       return localStorage.getItem('kite-lang') || 'en'
@@ -670,7 +696,9 @@ export default function App() {
     autoSynced.current = true
     const now = Date.now() / 1000
     for (const g of groups) {
-      if (g.updateHours > 0 && now - g.updatedAt > g.updateHours * 3600) {
+      // On startup every subscription refreshes (unless turned off);
+      // otherwise only those whose provider-set interval has passed.
+      if (syncOnStart || (g.updateHours > 0 && now - g.updatedAt > g.updateHours * 3600)) {
         RefreshSubscription(g.id)
           .then((fresh) => setServers((prev) => [...prev.filter((s) => s.extra?.subGroup !== g.id), ...fresh]))
           .catch(() => {})
@@ -1188,6 +1216,16 @@ export default function App() {
                       >
                         <span className="w-3">{sortByDelay ? '✓' : ''}</span>
                         {t('sortByDelay')}
+                      </button>
+                      <button
+                        className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2"
+                        onClick={() => {
+                          setSyncOnStart((v) => !v)
+                          setPingMenuOpen(false)
+                        }}
+                      >
+                        <span className="w-3">{syncOnStart ? '✓' : ''}</span>
+                        {t('syncOnStart')}
                       </button>
                       <button
                         className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2 disabled:opacity-40"

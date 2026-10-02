@@ -73,6 +73,8 @@ func TestTransports(t *testing.T) {
 		{"type": "kcp"},
 		{"type": "grpc", "serviceName": "svc", "mode": "multi", "security": "tls"},
 		{"type": "ws", "security": "tls", "sni": "a.example", "ech": "cloudflare-ech.com+https://1.1.1.1/dns-query"},
+		{"type": "tcp", "security": "tls", "mux": "1", "muxConcurrency": "4", "fragment": "1"},
+		{"type": "ws", "fragment": "1", "fragmentPackets": "1-3", "fragmentLength": "10-20", "fragmentInterval": "5-10"},
 	} {
 		s := profile.Server{Protocol: "vless", Address: "example.com", Port: 443, UUID: "b831381d-6324-4d53-ad4f-8cda48b30811", Extra: extra}
 		cfg, err := Build(s, Options{SOCKSPort: 1080})

@@ -7,6 +7,7 @@ package xrayconf
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/freeb5d/kite/pkg/profile"
@@ -177,6 +178,13 @@ func Outbound(server profile.Server) (map[string]interface{}, error) {
 	}
 
 	outbound["streamSettings"] = streamSettingsJSON(server)
+	if server.Extra["mux"] == "1" {
+		concurrency, _ := strconv.Atoi(server.Extra["muxConcurrency"])
+		if concurrency <= 0 {
+			concurrency = 8
+		}
+		outbound["mux"] = map[string]interface{}{"enabled": true, "concurrency": concurrency}
+	}
 	return outbound, nil
 }
 
@@ -261,6 +269,21 @@ func streamSettingsJSON(server profile.Server) map[string]interface{} {
 					},
 				},
 			}
+		}
+	}
+
+	// Fragment splits the first packets (by default the TLS ClientHello)
+	// into small, delayed pieces to slip past SNI-based filtering.
+	if server.Extra["fragment"] == "1" && stream["network"] != "kcp" {
+		stream["finalmask"] = map[string]interface{}{
+			"tcp": []map[string]interface{}{{
+				"type": "fragment",
+				"settings": map[string]interface{}{
+					"packets": FirstNonEmpty(server.Extra["fragmentPackets"], "tlshello"),
+					"length":  FirstNonEmpty(server.Extra["fragmentLength"], "100-200"),
+					"delay":   FirstNonEmpty(server.Extra["fragmentInterval"], "10-20"),
+				},
+			}},
 		}
 	}
 
