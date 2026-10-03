@@ -36,6 +36,7 @@ type Status struct {
 	Server  string `json:"server,omitempty"`
 	Mode    Mode   `json:"mode,omitempty"`
 	Message string `json:"message,omitempty"`
+	Since   int64  `json:"since,omitempty"` // unix ms when the connection came up
 }
 
 type Traffic struct {
@@ -74,7 +75,7 @@ func (m *Manager) Start(server profile.Server, mode Mode) error {
 		m.status = Status{State: StateError, Message: err.Error()}
 		return err
 	}
-	m.status = Status{State: StateRunning, Server: server.Name, Mode: mode}
+	m.status = Status{State: StateRunning, Server: server.Name, Mode: mode, Since: time.Now().UnixMilli()}
 	return nil
 }
 

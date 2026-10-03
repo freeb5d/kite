@@ -54,6 +54,15 @@ function openExternal(url) {
   }
 }
 
+function formatDuration(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const sec = total % 60
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${pad(h)}:${pad(m)}:${pad(sec)}`
+}
+
 function countryName(code, lang) {
   if (!code) return ''
   try {
@@ -820,6 +829,15 @@ export default function App() {
 
   const selected = servers.find((s) => s.id === selectedId) || null
   const isRunning = status.state === 'running'
+
+  // Ticks once a second while connected, for the connection timer.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!isRunning) return
+    setNow(Date.now())
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [isRunning])
   const isBusy = pending || status.state === 'starting'
   const needsElevation = (mode === 'tun' || killSwitch) && !elevated
 
@@ -1537,6 +1555,11 @@ export default function App() {
             <div className="text-sm font-medium">
               {isBusy ? (isRunning ? t('disconnecting') : t('connecting')) : isRunning ? t('connected') : t('disconnected')}
             </div>
+            {isRunning && status.since > 0 && (
+              <div className="mt-1 font-mono text-lg tabular-nums text-[var(--accent-hover)]" title={t('connectedFor')}>
+                {formatDuration(now - status.since)}
+              </div>
+            )}
             {isRunning && (
               <div className="text-xs text-[var(--text-faint)] mt-1">
                 {status.mode === 'tun' ? t('tunAdapterAllTraffic') : 'HTTP 127.0.0.1:2080 · SOCKS5 127.0.0.1:2081'}

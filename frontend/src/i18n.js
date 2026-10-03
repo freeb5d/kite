@@ -11,6 +11,7 @@ export const LANGUAGES = [
 
 const dict = {
   en: {
+    connectedFor: "Connected for",
     muxFragment: "Mux & fragment",
     mux: "Mux",
     muxConcurrency: "Mux concurrency",
@@ -138,6 +139,7 @@ const dict = {
     updateFailed: (msg) => `Update failed: ${msg}`,
   },
   zh: {
+    connectedFor: "已连接时长",
     muxFragment: "多路复用与分片",
     mux: "多路复用 (Mux)",
     muxConcurrency: "Mux 并发数",
@@ -265,6 +267,7 @@ const dict = {
     updateFailed: (msg) => `更新失败：${msg}`,
   },
   fa: {
+    connectedFor: "مدت اتصال",
     muxFragment: "Mux و فرگمنت",
     mux: "Mux",
     muxConcurrency: "هم‌زمانی Mux",
@@ -392,6 +395,7 @@ const dict = {
     updateFailed: (msg) => `به‌روزرسانی ناموفق بود: ${msg}`,
   },
   tr: {
+    connectedFor: "Bağlantı süresi",
     muxFragment: "Mux ve parçalama",
     mux: "Mux",
     muxConcurrency: "Mux eşzamanlılığı",
@@ -519,6 +523,7 @@ const dict = {
     updateFailed: (msg) => `Güncelleme başarısız: ${msg}`,
   },
   ar: {
+    connectedFor: "مدة الاتصال",
     muxFragment: "Mux والتجزئة",
     mux: "Mux",
     muxConcurrency: "تزامن Mux",
@@ -646,6 +651,7 @@ const dict = {
     updateFailed: (msg) => `فشل التحديث: ${msg}`,
   },
   fr: {
+    connectedFor: "Connecté depuis",
     muxFragment: "Mux et fragmentation",
     mux: "Mux",
     muxConcurrency: "Concurrence Mux",
@@ -773,6 +779,7 @@ const dict = {
     updateFailed: (msg) => `Échec de la mise à jour : ${msg}`,
   },
   de: {
+    connectedFor: "Verbunden seit",
     muxFragment: "Mux & Fragmentierung",
     mux: "Mux",
     muxConcurrency: "Mux-Parallelität",
@@ -900,6 +907,7 @@ const dict = {
     updateFailed: (msg) => `Update fehlgeschlagen: ${msg}`,
   },
   ru: {
+    connectedFor: "Время подключения",
     muxFragment: "Mux и фрагментация",
     mux: "Mux",
     muxConcurrency: "Параллелизм Mux",

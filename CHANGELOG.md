@@ -3,6 +3,11 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## ⏱️ v0.20.1 — Connection timer
+
+- While connected, a timer under "Connected" shows how long you've been connected to the
+  current server; it restarts when you switch servers.
+
 ## ⚙️ v0.20.0 — Mux, fragment and startup sync
 
 - **Mux** — multiplex many connections over one, with adjustable concurrency.
