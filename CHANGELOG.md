@@ -3,8 +3,13 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
-## ⚡ v0.21.0 — Faster DNS in TUN mode
+## ⚡ v0.21.0 — Right exit location in TUN mode, faster DNS
 
+- **Fixed: apps exiting through the wrong country.** Traffic from the TUN reached the
+  server as bare IP addresses, so servers that pick the exit location by site name sent it
+  out of their default location (e.g. Germany instead of the selected Finland), even though
+  Kite's own connection test showed the right country. Kite now reads the site name from
+  each connection (sniffing) and sends that instead.
 - In TUN mode, DNS lookups are answered by the built-in resolver: answers are cached and
   queries share one encrypted DNS-over-HTTPS connection through the server, instead of
   every lookup opening its own connection. Pages start loading noticeably faster.

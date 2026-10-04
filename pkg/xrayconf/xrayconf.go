@@ -32,6 +32,15 @@ type Options struct {
 	DirectPrivate bool
 }
 
+// sniffing recovers the site name (from the TLS SNI, HTTP Host or QUIC)
+// of connections that arrive as bare IPs, e.g. from the TUN, and sends the
+// name to the server. Many servers choose the exit location by domain, so
+// without it apps can exit through a different country than intended.
+var sniffing = map[string]interface{}{
+	"enabled":      true,
+	"destOverride": []string{"http", "tls", "quic"},
+}
+
 var privateNets = []string{
 	"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10",
 	"127.0.0.0/8", "169.254.0.0/16", "fc00::/7", "fe80::/10",
@@ -67,6 +76,7 @@ func Build(server profile.Server, o Options) ([]byte, error) {
 		inbounds = append(inbounds, map[string]interface{}{
 			"tag": "socks-in", "listen": "127.0.0.1", "port": o.SOCKSPort, "protocol": "socks",
 			"settings": map[string]interface{}{"udp": true},
+			"sniffing": sniffing,
 		})
 	}
 	if o.TUN {
@@ -77,6 +87,7 @@ func Build(server profile.Server, o Options) ([]byte, error) {
 		inbounds = append(inbounds, map[string]interface{}{
 			"tag": "tun-in", "protocol": "tun", "port": 0,
 			"settings": map[string]interface{}{"name": name, "MTU": 1500},
+			"sniffing": sniffing,
 		})
 	}
 
