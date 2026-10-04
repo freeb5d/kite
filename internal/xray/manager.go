@@ -18,6 +18,7 @@ import (
 	_ "github.com/xtls/xray-core/main/distro/all"
 
 	"github.com/freeb5d/kite/internal/system"
+	"github.com/freeb5d/kite/pkg/conntrack"
 	"github.com/freeb5d/kite/pkg/profile"
 	"github.com/freeb5d/kite/pkg/sshbridge"
 )
@@ -58,6 +59,7 @@ type Manager struct {
 }
 
 func NewManager() *Manager {
+	conntrack.Install()
 	return &Manager{status: Status{State: StateStopped}}
 }
 
@@ -254,6 +256,9 @@ func (m *Manager) Stop() error {
 	if m.instance != nil {
 		err = m.instance.Close()
 		m.instance = nil
+		// Already-open connections would otherwise keep using the old
+		// server (e.g. the previous exit country) until they go idle.
+		conntrack.CloseAll()
 	}
 	m.sshBridge.Close()
 	m.sshBridge = nil
