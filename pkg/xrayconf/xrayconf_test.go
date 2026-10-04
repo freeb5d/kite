@@ -59,8 +59,7 @@ func TestTUNDNSConfig(t *testing.T) {
 		t.Fatalf("missing DNS / private rules: %s", cfg)
 	}
 	if _, err := serial.LoadJSONConfig(bytes.NewReader(cfg)); err != nil {
-		t.Fatalf("xray rejected config: %v
-%s", err, cfg)
+		t.Fatalf("xray rejected config: %v\n%s", err, cfg)
 	}
 }
 
