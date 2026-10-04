@@ -49,6 +49,21 @@ func TestHysteria2Outbound(t *testing.T) {
 	}
 }
 
+func TestTUNDNSConfig(t *testing.T) {
+	s := profile.Server{Protocol: "trojan", Address: "example.com", Port: 443, Password: "pw", Extra: map[string]string{"security": "tls"}}
+	cfg, err := Build(s, Options{SOCKSPort: 1080, TUN: true, DirectPrivate: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(cfg), "dns-query") || !strings.Contains(string(cfg), "10.0.0.0/8") {
+		t.Fatalf("missing DNS / private rules: %s", cfg)
+	}
+	if _, err := serial.LoadJSONConfig(bytes.NewReader(cfg)); err != nil {
+		t.Fatalf("xray rejected config: %v
+%s", err, cfg)
+	}
+}
+
 func TestSSHConfig(t *testing.T) {
 	s := profile.Server{Protocol: "ssh", Address: "1.2.3.4", Port: 22, Password: "pw"}
 	cfg, err := Build(s, Options{SOCKSPort: 1080, TUN: false, SSHBridgePort: 5555})

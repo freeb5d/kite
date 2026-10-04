@@ -25,6 +25,16 @@ type Options struct {
 	// SSHBridgePort is the local SOCKS port of a running sshbridge.Bridge;
 	// required for "ssh" servers, which xray-core can't speak itself.
 	SSHBridgePort int
+
+	// DirectPrivate sends private/local network addresses (LAN, the
+	// carrier's internal DNS, ...) out directly instead of via the server.
+	// Only safe where xray's own sockets bypass the TUN (Android).
+	DirectPrivate bool
+}
+
+var privateNets = []string{
+	"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10",
+	"127.0.0.0/8", "169.254.0.0/16", "fc00::/7", "fe80::/10",
 }
 
 // Build returns an xray-core JSON config for server. The proxy outbound is
@@ -94,18 +104,25 @@ func Build(server profile.Server, o Options) ([]byte, error) {
 		},
 		"stats": map[string]interface{}{},
 	}
-	if server.Protocol == "ssh" {
-		// SSH carries TCP only, so plain UDP DNS (e.g. from the TUN) is
-		// answered by xray's DNS module, which asks 1.1.1.1 over TCP
-		// through the tunnel.
+	if o.TUN || server.Protocol == "ssh" {
+		// Plain UDP DNS from the TUN (or any DNS over SSH, which carries TCP
+		// only) is answered by xray's DNS module instead of tunnelling every
+		// query as its own connection: answers are cached and lookups share
+		// one encrypted DoH connection through the proxy.
+		servers := []string{"https://1.1.1.1/dns-query", "https://8.8.8.8/dns-query"}
+		if server.Protocol == "ssh" {
+			servers = []string{"tcp://1.1.1.1", "tcp://8.8.8.8"}
+		}
 		config["outbounds"] = append(config["outbounds"].([]map[string]interface{}),
 			map[string]interface{}{"tag": "dns-out", "protocol": "dns"})
-		config["dns"] = map[string]interface{}{"servers": []string{"tcp://1.1.1.1", "tcp://8.8.8.8"}}
-		config["routing"] = map[string]interface{}{
-			"rules": []map[string]interface{}{
-				{"type": "field", "network": "udp", "port": "53", "outboundTag": "dns-out"},
-			},
+		config["dns"] = map[string]interface{}{"servers": servers}
+		rules := []map[string]interface{}{
+			{"type": "field", "network": "udp", "port": "53", "outboundTag": "dns-out"},
 		}
+		if o.DirectPrivate {
+			rules = append(rules, map[string]interface{}{"type": "field", "ip": privateNets, "outboundTag": "direct"})
+		}
+		config["routing"] = map[string]interface{}{"rules": rules}
 	}
 	return json.Marshal(config)
 }

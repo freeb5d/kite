@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## ⚡ v0.21.0 — Faster DNS in TUN mode
+
+- In TUN mode, DNS lookups are answered by the built-in resolver: answers are cached and
+  queries share one encrypted DNS-over-HTTPS connection through the server, instead of
+  every lookup opening its own connection. Pages start loading noticeably faster.
+
 ## 🐛 v0.20.2 — Clean switch between servers
 
 - Disconnecting or switching servers now closes every open connection immediately.
