@@ -125,10 +125,16 @@ func Build(server profile.Server, o Options) ([]byte, error) {
 			servers = []string{"tcp://1.1.1.1", "tcp://8.8.8.8"}
 		}
 		config["outbounds"] = append(config["outbounds"].([]map[string]interface{}),
-			map[string]interface{}{"tag": "dns-out", "protocol": "dns"})
+			map[string]interface{}{"tag": "dns-out", "protocol": "dns"},
+			map[string]interface{}{"tag": "block", "protocol": "blackhole"})
 		config["dns"] = map[string]interface{}{"servers": servers}
 		rules := []map[string]interface{}{
 			{"type": "field", "network": "udp", "port": "53", "outboundTag": "dns-out"},
+			// Block QUIC (HTTP/3 over UDP 443): browsers fall back to TCP at
+			// once. Many servers route UDP differently from TCP (often out of
+			// the entry server's own location), so QUIC traffic would exit in
+			// the wrong country; TCP is also more reliable through a tunnel.
+			{"type": "field", "network": "udp", "port": "443", "outboundTag": "block"},
 		}
 		if o.DirectPrivate {
 			rules = append(rules, map[string]interface{}{"type": "field", "ip": privateNets, "outboundTag": "direct"})

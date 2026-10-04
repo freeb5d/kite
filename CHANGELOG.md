@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.21.1 — QUIC goes over TCP in TUN mode
+
+- In TUN mode, QUIC (HTTP/3 over UDP 443) is blocked, so browsers immediately use TCP.
+  Many servers send UDP out of a different location than TCP, which made browsers show the
+  wrong country even with the right server selected.
+
 ## ⚡ v0.21.0 — Right exit location in TUN mode, faster DNS
 
 - **Fixed: apps exiting through the wrong country.** Traffic from the TUN reached the
