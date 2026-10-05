@@ -6,7 +6,7 @@ require (
 	github.com/energye/systray v1.0.3
 	github.com/google/uuid v1.6.0
 	github.com/wailsapp/wails/v2 v2.9.2
-	github.com/xtls/xray-core v1.260327.0
+	github.com/xtls/xray-core v1.260327.1-0.20260930074004-b26a91de4f32
 	golang.org/x/sys v0.47.0
 )
 

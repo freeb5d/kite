@@ -19,3 +19,5 @@ func SetupTUNInterface(name, addr, mask, dns string) error {
 func TeardownTUNInterface(addr string) {}
 
 func RemoveStaleTUNRoutes(prefix string) {}
+
+func RemoveStaleTUNAdapters(prefix string) {}

@@ -75,3 +75,14 @@ func TeardownTUNInterface(addr string) {
 		_ = command("route", "delete", dst, "mask", "128.0.0.0", addr).Run()
 	}
 }
+
+// RemoveStaleTUNAdapters uninstalls Wintun adapters whose name starts with
+// prefix and that are no longer present (left behind by earlier sessions),
+// so they stop piling up in Windows' network adapter list. Needs admin;
+// silently does nothing without it.
+func RemoveStaleTUNAdapters(prefix string) {
+	script := `Get-PnpDevice -Class Net -ErrorAction SilentlyContinue | ` +
+		`Where-Object { $_.FriendlyName -like '` + prefix + `*' -and -not $_.Present } | ` +
+		`ForEach-Object { pnputil /remove-device $_.InstanceId | Out-Null }`
+	_ = command("powershell", "-NoProfile", "-NonInteractive", "-Command", script).Run()
+}

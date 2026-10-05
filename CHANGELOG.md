@@ -3,6 +3,15 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## ⬆️ v0.22.0 — xray-core v26.9.30, tidier TUN adapters
+
+- **xray-core updated to v26.9.30**, the newest release.
+- **TUN mode no longer piles up network adapters** — Kite alternates between two adapters
+  instead of creating a new one on every connect, and removes the leftovers earlier versions
+  created (when running as administrator).
+- Removed site-name sniffing from the TUN again: blocking QUIC turned out to be the real
+  fix for the wrong exit location.
+
 ## 🐛 v0.21.1 — QUIC goes over TCP in TUN mode
 
 - In TUN mode, QUIC (HTTP/3 over UDP 443) is blocked, so browsers immediately use TCP.

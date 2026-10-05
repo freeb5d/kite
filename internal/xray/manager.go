@@ -99,12 +99,14 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 		}
 	}
 
-	// A fresh adapter name per connection: xray doesn't always release the
-	// previous adapter on Close, and reopening one with a live session
-	// fails with "initialization has already been completed".
+	// Alternate between two adapter names: xray doesn't always release the
+	// previous adapter on Close right away, and reopening the same one fails
+	// with "initialization has already been completed". Only two names, so
+	// Windows doesn't accumulate a new network adapter on every connect.
 	m.tunSeq++
-	tunName := fmt.Sprintf("kite-tun-%d", m.tunSeq)
-	tunAddr := TUNAddress(m.tunSeq)
+	slot := m.tunSeq%2 + 1
+	tunName := fmt.Sprintf("kite-tun-%d", slot)
+	tunAddr := TUNAddress(slot)
 
 	// SSH servers go through a local SOCKS-to-SSH bridge; it dials the
 	// (already pinned) server address, which the exception route covers.
@@ -297,9 +299,9 @@ func (m *Manager) Traffic() Traffic {
 	return t
 }
 
-// TUNAddress is the adapter address for the n-th TUN connection. A new one
-// each time, since a lingering adapter from a previous connection may still
-// hold the old address.
+// TUNAddress is the address of TUN adapter slot n (1 or 2); each slot has
+// its own, since a lingering adapter from the previous connection may still
+// hold the other one.
 func TUNAddress(n int) string {
 	return fmt.Sprintf("172.19.%d.1", n%250)
 }

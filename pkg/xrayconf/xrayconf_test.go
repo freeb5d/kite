@@ -55,7 +55,7 @@ func TestTUNDNSConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(cfg), "dns-query") || !strings.Contains(string(cfg), "10.0.0.0/8") || !strings.Contains(string(cfg), "destOverride") || !strings.Contains(string(cfg), "blackhole") {
+	if !strings.Contains(string(cfg), "dns-query") || !strings.Contains(string(cfg), "10.0.0.0/8") || !strings.Contains(string(cfg), "blackhole") {
 		t.Fatalf("missing DNS / private rules: %s", cfg)
 	}
 	if _, err := serial.LoadJSONConfig(bytes.NewReader(cfg)); err != nil {
