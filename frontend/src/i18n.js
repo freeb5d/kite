@@ -11,6 +11,9 @@ export const LANGUAGES = [
 
 const dict = {
   en: {
+    importClipboard: "Import from clipboard",
+    clipboardEmpty: "Clipboard is empty",
+    clipboardNoLinks: "No share links or subscription URL in the clipboard",
     connectedFor: "Connected for",
     muxFragment: "Mux & fragment",
     mux: "Mux",
@@ -139,6 +142,9 @@ const dict = {
     updateFailed: (msg) => `Update failed: ${msg}`,
   },
   zh: {
+    importClipboard: "从剪贴板导入",
+    clipboardEmpty: "剪贴板为空",
+    clipboardNoLinks: "剪贴板中没有分享链接或订阅地址",
     connectedFor: "已连接时长",
     muxFragment: "多路复用与分片",
     mux: "多路复用 (Mux)",
@@ -267,6 +273,9 @@ const dict = {
     updateFailed: (msg) => `更新失败：${msg}`,
   },
   fa: {
+    importClipboard: "افزودن از کلیپ‌بورد",
+    clipboardEmpty: "کلیپ‌بورد خالی است",
+    clipboardNoLinks: "در کلیپ‌بورد لینک کانفیگ یا اشتراک پیدا نشد",
     connectedFor: "مدت اتصال",
     muxFragment: "Mux و فرگمنت",
     mux: "Mux",
@@ -395,6 +404,9 @@ const dict = {
     updateFailed: (msg) => `به‌روزرسانی ناموفق بود: ${msg}`,
   },
   tr: {
+    importClipboard: "Panodan içe aktar",
+    clipboardEmpty: "Pano boş",
+    clipboardNoLinks: "Panoda paylaşım bağlantısı veya abonelik adresi yok",
     connectedFor: "Bağlantı süresi",
     muxFragment: "Mux ve parçalama",
     mux: "Mux",
@@ -523,6 +535,9 @@ const dict = {
     updateFailed: (msg) => `Güncelleme başarısız: ${msg}`,
   },
   ar: {
+    importClipboard: "استيراد من الحافظة",
+    clipboardEmpty: "الحافظة فارغة",
+    clipboardNoLinks: "لا توجد روابط مشاركة أو رابط اشتراك في الحافظة",
     connectedFor: "مدة الاتصال",
     muxFragment: "Mux والتجزئة",
     mux: "Mux",
@@ -651,6 +666,9 @@ const dict = {
     updateFailed: (msg) => `فشل التحديث: ${msg}`,
   },
   fr: {
+    importClipboard: "Importer depuis le presse-papiers",
+    clipboardEmpty: "Le presse-papiers est vide",
+    clipboardNoLinks: "Aucun lien de partage ni URL d’abonnement dans le presse-papiers",
     connectedFor: "Connecté depuis",
     muxFragment: "Mux et fragmentation",
     mux: "Mux",
@@ -779,6 +797,9 @@ const dict = {
     updateFailed: (msg) => `Échec de la mise à jour : ${msg}`,
   },
   de: {
+    importClipboard: "Aus Zwischenablage importieren",
+    clipboardEmpty: "Zwischenablage ist leer",
+    clipboardNoLinks: "Keine Freigabelinks oder Abo-URL in der Zwischenablage",
     connectedFor: "Verbunden seit",
     muxFragment: "Mux & Fragmentierung",
     mux: "Mux",
@@ -907,6 +928,9 @@ const dict = {
     updateFailed: (msg) => `Update fehlgeschlagen: ${msg}`,
   },
   ru: {
+    importClipboard: "Импорт из буфера обмена",
+    clipboardEmpty: "Буфер обмена пуст",
+    clipboardNoLinks: "В буфере обмена нет ссылок или адреса подписки",
     connectedFor: "Время подключения",
     muxFragment: "Mux и фрагментация",
     mux: "Mux",

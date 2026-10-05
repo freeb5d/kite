@@ -3,9 +3,10 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
-## ⬆️ v0.22.0 — xray-core v26.9.30, tidier TUN adapters
+## 📋 v0.22.0 — Import from clipboard, tidier TUN adapters
 
-- **xray-core updated to v26.9.30**, the newest release.
+- **Import from clipboard** — a new button next to + adds whatever share links or
+  subscription URL you copied, in one click.
 - **TUN mode no longer piles up network adapters** — Kite alternates between two adapters
   instead of creating a new one on every connect, and removes the leftovers earlier versions
   created (when running as administrator).

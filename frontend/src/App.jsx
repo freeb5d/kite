@@ -31,6 +31,7 @@ import {
   PingServer,
   SaveProfile,
 } from '../wailsjs/go/main/App'
+import { ClipboardGetText } from '../wailsjs/runtime/runtime'
 
 function errorText(err) {
   if (!err) return 'Unknown error'
@@ -898,22 +899,42 @@ export default function App() {
     return `${formatBytes(n)}/s`
   }
 
+  // Adds a subscription URL, or every share link in value (one or many).
+  async function importText(value) {
+    if (/^https?:\/\//i.test(value)) {
+      const added = await AddSubscription(value)
+      setServers((prev) => [...prev, ...added])
+      if (added.length > 0) setSelectedId(added[added.length - 1].id)
+      return added.length
+    }
+    const links = value.split(/\s+/).filter((l) => l.includes('://'))
+    if (links.length === 0) throw new Error(t('clipboardNoLinks'))
+    const added = []
+    for (const l of links) added.push(await AddProfileFromLink(l))
+    setServers((prev) => [...prev, ...added])
+    setSelectedId(added[added.length - 1].id)
+    return added.length
+  }
+
   async function handleAddLink() {
     const value = link.trim()
     if (!value) return
     setError('')
     try {
-      if (/^https?:\/\//i.test(value)) {
-        const added = await AddSubscription(value)
-        setServers((prev) => [...prev, ...added])
-        if (added.length > 0) setSelectedId(added[added.length - 1].id)
-      } else {
-        const server = await AddProfileFromLink(value)
-        setServers((prev) => [...prev, server])
-        setSelectedId(server.id)
-      }
+      await importText(value)
       setLink('')
       setAddOpen(false)
+    } catch (err) {
+      setError(errorText(err))
+    }
+  }
+
+  async function handlePasteImport() {
+    setError('')
+    try {
+      const value = ((await ClipboardGetText()) || '').trim()
+      if (!value) throw new Error(t('clipboardEmpty'))
+      await importText(value)
     } catch (err) {
       setError(errorText(err))
     }
@@ -1174,6 +1195,13 @@ export default function App() {
                 onClick={() => setAddOpen((v) => !v)}
               >
                 <Icon path={icons.plus} className="w-4 h-4" />
+              </button>
+              <button
+                className="w-9 h-9 shrink-0 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--text-dim)] flex items-center justify-center transition-colors"
+                title={t('importClipboard')}
+                onClick={handlePasteImport}
+              >
+                <Icon path="M9 4h6v3H9zM8 5H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2M9 13h6M9 17h4" className="w-4 h-4" />
               </button>
             </div>
 
