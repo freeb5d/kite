@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 💬 v0.22.1 — Provider support link
+
+- When a subscription provides a support link (the standard `support-url` header), a small
+  Telegram icon appears on the subscription — one click opens the provider's support chat.
+  Other support links show a help icon instead.
+
 ## 📋 v0.22.0 — Import from clipboard, tidier TUN adapters
 
 - **Import from clipboard** — a new button next to + adds whatever share links or

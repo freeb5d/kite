@@ -1,6 +1,7 @@
 package profile
 
 import (
+	"net/http"
 	"encoding/base64"
 	"testing"
 )
@@ -185,5 +186,23 @@ func TestSSHLink(t *testing.T) {
 	back, err := ParseLink(link)
 	if err != nil || back.Password != "p@ss" || back.Extra["user"] != "admin" || back.Port != 2222 {
 		t.Fatalf("round trip %q -> %+v %v", link, back, err)
+	}
+}
+
+func TestSupportURL(t *testing.T) {
+	h := http.Header{}
+	h.Set("support-url", "https://t.me/dino_support2")
+	if got := SupportURL(h); got != "https://t.me/dino_support2" {
+		t.Fatalf("got %q", got)
+	}
+	h = http.Header{}
+	h.Set("Support-URL", "@kite_help")
+	if got := SupportURL(h); got != "https://t.me/kite_help" {
+		t.Fatalf("got %q", got)
+	}
+	h = http.Header{}
+	h.Set("Support-URL", "javascript:alert(1)")
+	if got := SupportURL(h); got != "" {
+		t.Fatalf("unsafe scheme accepted: %q", got)
 	}
 }

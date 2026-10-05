@@ -282,6 +282,7 @@ func (a *App) importSubscription(subURL, groupID string) ([]profile.Server, erro
 	// subscriptions whose interval has passed.
 	updateHours := strings.TrimSpace(resp.Header.Get("Profile-Update-Interval"))
 	updatedAt := strconv.FormatInt(time.Now().Unix(), 10)
+	support := profile.SupportURL(resp.Header)
 
 	// Usage/expiry, when the provider reports it via the informal but
 	// widely-adopted Subscription-Userinfo response header, plus any
@@ -318,6 +319,9 @@ func (a *App) importSubscription(subURL, groupID string) ([]profile.Server, erro
 		}
 		if subNotes != "" {
 			parsed[i].Extra["subNotes"] = subNotes
+		}
+		if support != "" {
+			parsed[i].Extra["subSupport"] = support
 		}
 	}
 	return a.store.ReplaceWhere(inGroup(groupID), parsed)

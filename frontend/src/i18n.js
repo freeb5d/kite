@@ -11,6 +11,7 @@ export const LANGUAGES = [
 
 const dict = {
   en: {
+    support: "Support",
     importClipboard: "Import from clipboard",
     clipboardEmpty: "Clipboard is empty",
     clipboardNoLinks: "No share links or subscription URL in the clipboard",
@@ -142,6 +143,7 @@ const dict = {
     updateFailed: (msg) => `Update failed: ${msg}`,
   },
   zh: {
+    support: "客服",
     importClipboard: "从剪贴板导入",
     clipboardEmpty: "剪贴板为空",
     clipboardNoLinks: "剪贴板中没有分享链接或订阅地址",
@@ -273,6 +275,7 @@ const dict = {
     updateFailed: (msg) => `更新失败：${msg}`,
   },
   fa: {
+    support: "پشتیبانی",
     importClipboard: "افزودن از کلیپ‌بورد",
     clipboardEmpty: "کلیپ‌بورد خالی است",
     clipboardNoLinks: "در کلیپ‌بورد لینک کانفیگ یا اشتراک پیدا نشد",
@@ -404,6 +407,7 @@ const dict = {
     updateFailed: (msg) => `به‌روزرسانی ناموفق بود: ${msg}`,
   },
   tr: {
+    support: "Destek",
     importClipboard: "Panodan içe aktar",
     clipboardEmpty: "Pano boş",
     clipboardNoLinks: "Panoda paylaşım bağlantısı veya abonelik adresi yok",
@@ -535,6 +539,7 @@ const dict = {
     updateFailed: (msg) => `Güncelleme başarısız: ${msg}`,
   },
   ar: {
+    support: "الدعم",
     importClipboard: "استيراد من الحافظة",
     clipboardEmpty: "الحافظة فارغة",
     clipboardNoLinks: "لا توجد روابط مشاركة أو رابط اشتراك في الحافظة",
@@ -666,6 +671,7 @@ const dict = {
     updateFailed: (msg) => `فشل التحديث: ${msg}`,
   },
   fr: {
+    support: "Assistance",
     importClipboard: "Importer depuis le presse-papiers",
     clipboardEmpty: "Le presse-papiers est vide",
     clipboardNoLinks: "Aucun lien de partage ni URL d’abonnement dans le presse-papiers",
@@ -797,6 +803,7 @@ const dict = {
     updateFailed: (msg) => `Échec de la mise à jour : ${msg}`,
   },
   de: {
+    support: "Support",
     importClipboard: "Aus Zwischenablage importieren",
     clipboardEmpty: "Zwischenablage ist leer",
     clipboardNoLinks: "Keine Freigabelinks oder Abo-URL in der Zwischenablage",
@@ -928,6 +935,7 @@ const dict = {
     updateFailed: (msg) => `Update fehlgeschlagen: ${msg}`,
   },
   ru: {
+    support: "Поддержка",
     importClipboard: "Импорт из буфера обмена",
     clipboardEmpty: "Буфер обмена пуст",
     clipboardNoLinks: "В буфере обмена нет ссылок или адреса подписки",

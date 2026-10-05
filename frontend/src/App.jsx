@@ -688,6 +688,7 @@ export default function App() {
           url: s.extra?.subURL || '',
           updatedAt: Number(s.extra?.subUpdatedAt || 0),
           updateHours: Number(s.extra?.subUpdateHours || 0),
+          support: s.extra?.subSupport || '',
           servers: [],
           notes,
           usage,
@@ -1396,6 +1397,25 @@ export default function App() {
                       >
                         <Icon path={icons.gauge} className="w-3.5 h-3.5" />
                       </button>
+                      {g.support && (
+                        <button
+                          className="w-6 h-6 rounded hover:bg-[var(--bg-hover)] flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openExternal(g.support)
+                          }}
+                          title={`${t('support')} · ${g.support.replace(/^https?:\/\/t\.me\//, '@')}`}
+                        >
+                          {/t\.me\/|^tg:/i.test(g.support) ? (
+                            <svg viewBox="0 0 24 24" className="w-4 h-4" aria-hidden="true">
+                              <circle cx="12" cy="12" r="12" fill="#2AABEE" />
+                              <path fill="#fff" d="M5.4 11.7l11.6-4.5c.5-.2 1 .1.8.9l-2 9.3c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.3c-.2.2-.3.3-.6.3l.2-3 5.4-4.9c.2-.2 0-.3-.3-.1l-6.7 4.2-2.9-.9c-.6-.2-.6-.6.1-.9z" />
+                            </svg>
+                          ) : (
+                            <Icon path="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01" className="w-3.5 h-3.5 text-[var(--text-faint)]" />
+                          )}
+                        </button>
+                      )}
                       <button
                         className="w-6 h-6 rounded text-[var(--text-faint)] hover:text-[var(--text)] hover:bg-[var(--bg-hover)] flex items-center justify-center"
                         onClick={(e) => handleSyncGroup(g.id, e)}

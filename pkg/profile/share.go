@@ -12,7 +12,7 @@ import (
 
 // internalKeys are bookkeeping fields Kite adds to Extra; they're never part
 // of a share link.
-var internalKeys = map[string]bool{"subGroup": true, "subGroupName": true, "subURL": true, "subUsage": true, "subNotes": true, "subUpdatedAt": true, "subUpdateHours": true}
+var internalKeys = map[string]bool{"subGroup": true, "subGroupName": true, "subURL": true, "subUsage": true, "subNotes": true, "subUpdatedAt": true, "subUpdateHours": true, "subSupport": true}
 
 // ShareLink turns a saved server back into a standard share link, so it can
 // be copied into another client (or another Kite) and parsed by ParseLink.
