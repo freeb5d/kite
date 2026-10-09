@@ -55,9 +55,6 @@ func (a *App) startup(ctx context.Context) {
 	// outbound traffic blocked) until they connect and disconnect again.
 	update.CleanupOldBinary()
 	system.RemoveStaleTUNRoutes("172.19.")
-	// Earlier versions created a new adapter per connection; clear out
-	// the leftovers (and any stale ones) in the background.
-	go system.RemoveStaleTUNAdapters("kite-tun")
 	_ = system.ClearStaleProxy("127.0.0.1", xray.HTTPInboundPort)
 	if system.KillSwitchActive() {
 		_ = system.DisableKillSwitch()

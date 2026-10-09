@@ -151,7 +151,10 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 				_ = instance.Close()
 			}
 		}
-		if err == nil || attempt == attempts || !isAdapterStillReleasing(err) {
+		// In TUN mode any failure to bring the adapter up (still held by
+		// the previous session, half-removed by Windows, ...) is retried
+		// with the next adapter name; only a missing wintun.dll is final.
+		if err == nil || attempt == attempts || mode != ModeTUN || missingTUNDLL() {
 			break
 		}
 		time.Sleep(500 * time.Millisecond)

@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.22.3 — TUN connect fix
+
+- Fixed "The system cannot find the file specified" when connecting in TUN mode. Kite no
+  longer removes old network adapters itself at startup (Windows could be left with a
+  half-removed adapter), and any adapter error now makes Kite move on to the next adapter.
+
 ## 🐛 v0.22.2 — TUN reconnect fix
 
 - Fixed "initialization has already been completed" when switching servers or reconnecting
