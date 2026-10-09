@@ -78,9 +78,37 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: wails build -platform ${{ matrix.platform }} -tags webkit2_41 -ldflags "-X main.version=${{ steps.version.outputs.value }}" -clean
 
+      - name: Install NSIS (Windows installer)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) { choco install nsis -y --no-progress }
+          "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Set installer version
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $v = "${{ steps.version.outputs.value }}".TrimStart('v')
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { $v = '0.0.0' }
+          $w = Get-Content wails.json -Raw | ConvertFrom-Json
+          $w.info.productVersion = $v
+          $w | ConvertTo-Json -Depth 10 | Set-Content wails.json -Encoding utf8
+
       - name: Build (Windows)
         if: matrix.os == 'windows-latest'
-        run: wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=${{ steps.version.outputs.value }}" -clean
+        run: wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=${{ steps.version.outputs.value }}" -clean -nsis
+
+      - name: Collect Windows installer
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: cp build/bin/*installer*.exe kite-windows-amd64-setup.exe
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'windows-latest'
+        with:
+          name: kite-windows-amd64-setup.exe
+          path: kite-windows-amd64-setup.exe
 
       - name: Build (macOS)
         if: matrix.os == 'macos-14'

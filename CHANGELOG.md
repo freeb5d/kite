@@ -3,6 +3,15 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 📦 v0.23.0 — Windows installer
+
+- **New: Windows installer** (`kite-windows-amd64-setup.exe`) — installs Kite into Program
+  Files with Start menu and desktop shortcuts, and registers it in **Settings → Apps** so it
+  can be uninstalled like any other program. The portable `kite-windows-amd64.exe` is still
+  available for those who prefer it.
+- In-app updates keep working for both: an installed Kite downloads the new setup and
+  installs it silently (one administrator prompt), a portable one swaps its own file.
+
 ## 🐛 v0.22.3 — TUN connect fix
 
 - Fixed "The system cannot find the file specified" when connecting in TUN mode. Kite no

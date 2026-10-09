@@ -1,9 +1,8 @@
-// Package update checks GitHub Releases for a newer Kite build and can
-// swap the running binary for the downloaded one. Kite ships as a portable
-// single-file executable (no installer), so "update" means: download the
-// new exe, rename the current one aside, move the new one into place, and
-// relaunch -- the same rename+relaunch pattern Go self-updaters use, which
-// works without admin rights on both Windows and Linux.
+// Package update checks GitHub Releases for a newer Kite build and installs
+// it. A portable copy swaps its own executable: download the new exe,
+// rename the current one aside, move the new one into place and relaunch
+// (works without admin rights). A copy set up by the Windows installer
+// downloads the new setup instead and runs it silently.
 package update
 
 import (
@@ -70,6 +69,9 @@ func Check(currentVersion string) (Info, error) {
 	}
 
 	assetName := assetNameForPlatform()
+	if exe, err := os.Executable(); err == nil && installed(exe) {
+		assetName = "kite-windows-amd64-setup.exe"
+	}
 	var downloadURL string
 	for _, a := range rel.Assets {
 		if a.Name == assetName {
@@ -164,6 +166,17 @@ func Apply(info Info, onProgress func(Progress)) error {
 	}
 	if resolved, err := filepath.EvalSymlinks(exePath); err == nil {
 		exePath = resolved
+	}
+
+	if installed(exePath) {
+		setup := filepath.Join(os.TempDir(), "kite-setup.exe")
+		if err := download(info.downloadURL, setup, onProgress); err != nil {
+			return fmt.Errorf("download update: %w", err)
+		}
+		if err := runInstaller(setup, exePath); err != nil {
+			return fmt.Errorf("start installer: %w", err)
+		}
+		return nil
 	}
 
 	newPath := exePath + ".new"

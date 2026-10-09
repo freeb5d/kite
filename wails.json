@@ -8,5 +8,12 @@
   "frontend:dev:serverUrl": "auto",
   "author": {
     "name": "freeb5d"
+  },
+  "info": {
+    "companyName": "Kite",
+    "productName": "Kite",
+    "productVersion": "0.0.0",
+    "copyright": "MIT License",
+    "comments": "V2Ray / Xray client"
   }
 }
