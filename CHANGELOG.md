@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.22.2 — TUN reconnect fix
+
+- Fixed "initialization has already been completed" when switching servers or reconnecting
+  in TUN mode: if Windows hasn't released an adapter yet, Kite now moves on to the next one
+  from a small fixed set (at most four) instead of retrying the busy one.
+
 ## 💬 v0.22.1 — Provider support link
 
 - When a subscription provides a support link (the standard `support-url` header), a small

@@ -99,14 +99,12 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 		}
 	}
 
-	// Alternate between two adapter names: xray doesn't always release the
-	// previous adapter on Close right away, and reopening the same one fails
-	// with "initialization has already been completed". Only two names, so
-	// Windows doesn't accumulate a new network adapter on every connect.
-	m.tunSeq++
-	slot := m.tunSeq%2 + 1
-	tunName := fmt.Sprintf("kite-tun-%d", slot)
-	tunAddr := TUNAddress(slot)
+	// Adapter names come from a small fixed pool: xray doesn't always
+	// release an adapter on Close right away, and reopening one that is
+	// still held fails with "initialization has already been completed" --
+	// so each attempt below moves on to the next name. A fixed pool keeps
+	// Windows from accumulating a new network adapter on every connect.
+	var tunName, tunAddr string
 
 	// SSH servers go through a local SOCKS-to-SSH bridge; it dials the
 	// (already pinned) server address, which the exception route covers.
@@ -127,24 +125,25 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 		}
 	}()
 
-	configBytes, err := buildJSON(server, mode, tunName, bridgePort)
-	if err != nil {
-		return err
-	}
-	config, err := serial.LoadJSONConfig(bytes.NewReader(configBytes))
-	if err != nil {
-		return fmt.Errorf("invalid generated xray-core config: %w", err)
-	}
-
-	// A Wintun adapter from a TUN session that just ended isn't always
-	// released yet, so creating it again fails with "initialization has
-	// already been completed". Retry with a fresh instance each time.
 	attempts := 1
 	if mode == ModeTUN {
-		attempts = 5
+		attempts = tunSlots + 1
 	}
 	var instance *core.Instance
+	var err error
 	for attempt := 1; attempt <= attempts; attempt++ {
+		m.tunSeq++
+		slot := m.tunSeq%tunSlots + 1
+		tunName = fmt.Sprintf("kite-tun-%d", slot)
+		tunAddr = TUNAddress(slot)
+		configBytes, berr := buildJSON(server, mode, tunName, bridgePort)
+		if berr != nil {
+			return berr
+		}
+		config, berr := serial.LoadJSONConfig(bytes.NewReader(configBytes))
+		if berr != nil {
+			return fmt.Errorf("invalid generated xray-core config: %w", berr)
+		}
 		instance, err = core.New(config)
 		if err == nil {
 			err = instance.Start()
@@ -155,7 +154,7 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 		if err == nil || attempt == attempts || !isAdapterStillReleasing(err) {
 			break
 		}
-		time.Sleep(time.Duration(attempt) * 700 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
 	if err != nil {
 		switch {
@@ -299,9 +298,12 @@ func (m *Manager) Traffic() Traffic {
 	return t
 }
 
-// TUNAddress is the address of TUN adapter slot n (1 or 2); each slot has
-// its own, since a lingering adapter from the previous connection may still
-// hold the other one.
+// tunSlots is the size of the TUN adapter name pool (kite-tun-1..4).
+const tunSlots = 4
+
+// TUNAddress is the address of TUN adapter slot n; each slot has its own,
+// since a lingering adapter from an earlier connection may still hold
+// another one.
 func TUNAddress(n int) string {
 	return fmt.Sprintf("172.19.%d.1", n%250)
 }
