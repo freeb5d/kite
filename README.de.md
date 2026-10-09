@@ -30,7 +30,7 @@ Hol dir die neueste Version von der **[Releases-Seite](https://github.com/freeb5
 
 | Plattform | Download |
 | --- | --- |
-| Windows (x64) | `kite-windows-amd64.exe` |
+| Windows (x64) | `kite-windows-amd64-setup.exe` (Installer) · `kite-windows-amd64.exe` (portabel) |
 | Linux (x64) | `kite-linux-amd64` |
 | macOS (Apple Silicon) | `kite-macos-arm64` |
 

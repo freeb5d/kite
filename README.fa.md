@@ -30,7 +30,7 @@
 
 | پلتفرم | فایل دانلود |
 | --- | --- |
-| ویندوز (x64) | `kite-windows-amd64.exe` |
+| ویندوز (x64) | `kite-windows-amd64-setup.exe` (نصب‌کننده) · `kite-windows-amd64.exe` (پرتابل) |
 | لینوکس (x64) | `kite-linux-amd64` |
 | مک‌اواس (Apple Silicon) | `kite-macos-arm64` |
 

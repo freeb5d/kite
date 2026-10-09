@@ -30,7 +30,7 @@
 
 | 平台 | 下载文件 |
 | --- | --- |
-| Windows (x64) | `kite-windows-amd64.exe` |
+| Windows (x64) | `kite-windows-amd64-setup.exe` (安装程序) · `kite-windows-amd64.exe` (便携版) |
 | Linux (x64) | `kite-linux-amd64` |
 | macOS (Apple Silicon) | `kite-macos-arm64` |
 

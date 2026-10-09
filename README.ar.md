@@ -30,7 +30,7 @@
 
 | المنصة | التنزيل |
 | --- | --- |
-| ويندوز (x64) | `kite-windows-amd64.exe` |
+| ويندوز (x64) | `kite-windows-amd64-setup.exe` (المثبّت) · `kite-windows-amd64.exe` (محمول) |
 | لينكس (x64) | `kite-linux-amd64` |
 | ماك أو إس (Apple Silicon) | `kite-macos-arm64` |
 

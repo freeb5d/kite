@@ -30,7 +30,7 @@ Récupérez la dernière version depuis la **[page des Releases](https://github.
 
 | Plateforme | Téléchargement |
 | --- | --- |
-| Windows (x64) | `kite-windows-amd64.exe` |
+| Windows (x64) | `kite-windows-amd64-setup.exe` (installateur) · `kite-windows-amd64.exe` (portable) |
 | Linux (x64) | `kite-linux-amd64` |
 | macOS (Apple Silicon) | `kite-macos-arm64` |
 

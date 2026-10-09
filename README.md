@@ -30,7 +30,7 @@ Grab the latest build from the **[Releases page](https://github.com/freeb5d/kite
 
 | Platform | Download |
 | --- | --- |
-| Windows (x64) | `kite-windows-amd64.exe` |
+| Windows (x64) | `kite-windows-amd64-setup.exe` (Installer) · `kite-windows-amd64.exe` (portable) |
 | Linux (x64) | `kite-linux-amd64` |
 | macOS (Apple Silicon) | `kite-macos-arm64` |
 

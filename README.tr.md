@@ -30,7 +30,7 @@ En son sürümü **[Releases sayfasından](https://github.com/freeb5d/kite/relea
 
 | Platform | İndirme |
 | --- | --- |
-| Windows (x64) | `kite-windows-amd64.exe` |
+| Windows (x64) | `kite-windows-amd64-setup.exe` (kurulum) · `kite-windows-amd64.exe` (taşınabilir) |
 | Linux (x64) | `kite-linux-amd64` |
 | macOS (Apple Silicon) | `kite-macos-arm64` |
 

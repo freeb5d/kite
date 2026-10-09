@@ -30,7 +30,7 @@
 
 | Платформа | Файл |
 | --- | --- |
-| Windows (x64) | `kite-windows-amd64.exe` |
+| Windows (x64) | `kite-windows-amd64-setup.exe` (установщик) · `kite-windows-amd64.exe` (портативная) |
 | Linux (x64) | `kite-linux-amd64` |
 | macOS (Apple Silicon) | `kite-macos-arm64` |
 
