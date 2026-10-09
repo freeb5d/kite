@@ -3,6 +3,11 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.23.1 — Memory fix
+
+- Fixed memory slowly growing during long sessions: connections that ended on their own
+  could stay on Kite's internal list (used to close everything when switching servers).
+
 ## 📦 v0.23.0 — Windows installer
 
 - **New: Windows installer** (`kite-windows-amd64-setup.exe`) — installs Kite into Program

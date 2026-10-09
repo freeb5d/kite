@@ -76,12 +76,37 @@ type conn struct {
 	closeOnce sync.Once
 }
 
+// untrack forgets c without closing it. Called as soon as the connection
+// fails or ends: xray doesn't always Close the exact wrapper it was handed
+// (it may drop it once the peer is gone), and a forgotten entry would keep
+// the connection's memory alive for good -- slowly growing until Android
+// kills the app.
+func (c *conn) untrack() {
+	mu.Lock()
+	delete(conns, c)
+	mu.Unlock()
+}
+
+func (c *conn) Read(b []byte) (int, error) {
+	n, err := c.Conn.Read(b)
+	if err != nil {
+		c.untrack()
+	}
+	return n, err
+}
+
+func (c *conn) Write(b []byte) (int, error) {
+	n, err := c.Conn.Write(b)
+	if err != nil {
+		c.untrack()
+	}
+	return n, err
+}
+
 func (c *conn) Close() error {
 	var err error
 	c.closeOnce.Do(func() {
-		mu.Lock()
-		delete(conns, c)
-		mu.Unlock()
+		c.untrack()
 		err = c.Conn.Close()
 	})
 	return err
@@ -93,5 +118,18 @@ type packetConn struct {
 	pc gonet.PacketConn
 }
 
-func (p *packetConn) ReadFrom(b []byte) (int, gonet.Addr, error)  { return p.pc.ReadFrom(b) }
-func (p *packetConn) WriteTo(b []byte, a gonet.Addr) (int, error) { return p.pc.WriteTo(b, a) }
+func (p *packetConn) ReadFrom(b []byte) (int, gonet.Addr, error) {
+	n, a, err := p.pc.ReadFrom(b)
+	if err != nil {
+		p.untrack()
+	}
+	return n, a, err
+}
+
+func (p *packetConn) WriteTo(b []byte, a gonet.Addr) (int, error) {
+	n, err := p.pc.WriteTo(b, a)
+	if err != nil {
+		p.untrack()
+	}
+	return n, err
+}
