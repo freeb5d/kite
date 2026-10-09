@@ -3,6 +3,11 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🎨 v0.23.3 — Smooth logo corners
+
+- Redrew the logo's rounded corners as a clean, even shape, so they look smooth at every
+  size, including the small title bar and taskbar icons.
+
 ## 🎨 v0.23.2 — Clean logo
 
 - The Kite logo (app icon, window and in-app) no longer has a black square behind its
