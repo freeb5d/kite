@@ -3,6 +3,11 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🎨 v0.23.2 — Clean logo
+
+- The Kite logo (app icon, window and in-app) no longer has a black square behind its
+  rounded corners — it now sits cleanly on any background, light or dark.
+
 ## 🐛 v0.23.1 — Memory fix
 
 - Fixed memory slowly growing during long sessions: connections that ended on their own
