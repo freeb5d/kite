@@ -14,6 +14,7 @@ import {
   RenameProfile,
   Connect,
   Disconnect,
+  SwitchServer,
   Ports,
   SetPorts,
   Status,
@@ -969,8 +970,21 @@ export default function App() {
     setTestResult(null)
     setPending(true)
     try {
-      await Disconnect()
-      await Connect(id, mode, killSwitch)
+      // TUN: swap the server behind the running tunnel (no new adapter);
+      // otherwise, or if that isn't possible, reconnect.
+      let switched = false
+      if (status.mode === 'tun') {
+        try {
+          await SwitchServer(id)
+          switched = true
+        } catch {
+          // fall through to a full reconnect
+        }
+      }
+      if (!switched) {
+        await Disconnect()
+        await Connect(id, mode, killSwitch)
+      }
       setStatus(await Status())
       handleTest()
     } catch (err) {

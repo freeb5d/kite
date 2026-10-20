@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🔀 v0.25.0 — Instant server switch in TUN mode
+
+- Switching servers while connected in TUN mode now keeps the tunnel running and only
+  swaps the server behind it: faster, no new network adapter, and no "initialization has
+  already been completed" errors. SSH servers still reconnect fully.
+
 ## 🐛 v0.24.1 — TUN reconnect fix
 
 - Fixed "initialization has already been completed" after reconnecting a few times in TUN

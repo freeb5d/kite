@@ -350,6 +350,17 @@ func (a *App) RenameProfile(id string, name string) (profile.Server, error) {
 // (which is how xray itself reaches the VPN server) and loopback while
 // connected -- see internal/system/killswitch_windows.go. It's currently
 // Windows-only and needs the same elevation as TUN mode.
+// SwitchServer moves a running TUN connection to another server in place,
+// keeping the same TUN adapter. Errors when that isn't possible (not in
+// TUN mode, SSH servers, ...); the UI then reconnects instead.
+func (a *App) SwitchServer(serverID string) error {
+	server, err := a.store.Get(serverID)
+	if err != nil {
+		return err
+	}
+	return a.manager.Switch(server)
+}
+
 // Ports returns the local proxy ports {http, socks}.
 func (a *App) Ports() map[string]int {
 	return map[string]int{"http": xray.HTTPInboundPort, "socks": xray.SOCKSInboundPort}
