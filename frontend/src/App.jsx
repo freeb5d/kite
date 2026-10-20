@@ -14,6 +14,8 @@ import {
   RenameProfile,
   Connect,
   Disconnect,
+  Ports,
+  SetPorts,
   Status,
   Traffic,
   Version,
@@ -476,6 +478,24 @@ export default function App() {
       return false
     }
   })
+  const [ports, setPorts] = useState({ http: 2080, socks: 2081 })
+  const [portsDraft, setPortsDraft] = useState(null) // {http, socks} while editing
+  useEffect(() => {
+    Ports().then(setPorts).catch(() => {})
+  }, [])
+
+  async function savePorts() {
+    try {
+      const http = Number(portsDraft.http)
+      const socks = Number(portsDraft.socks)
+      await SetPorts(http, socks)
+      setPorts({ http, socks })
+      setPortsDraft(null)
+    } catch (err) {
+      setError(errorText(err))
+    }
+  }
+
   const [syncOnStart, setSyncOnStart] = useState(() => {
     try {
       return localStorage.getItem('kite-sync-start') !== '0'
@@ -1560,6 +1580,33 @@ export default function App() {
             </div>
           )}
 
+          {mode === 'proxy' && !isRunning && (
+            <div className="flex items-center gap-2 text-xs text-[var(--text-dim)]">
+              {portsDraft ? (
+                <>
+                  HTTP
+                  <input
+                    type="number" min="1024" max="65535" value={portsDraft.http}
+                    onChange={(e) => setPortsDraft({ ...portsDraft, http: e.target.value })}
+                    className="w-20 rounded border border-[var(--border)] bg-[var(--bg-panel)] px-1.5 py-0.5"
+                  />
+                  SOCKS
+                  <input
+                    type="number" min="1024" max="65535" value={portsDraft.socks}
+                    onChange={(e) => setPortsDraft({ ...portsDraft, socks: e.target.value })}
+                    className="w-20 rounded border border-[var(--border)] bg-[var(--bg-panel)] px-1.5 py-0.5"
+                  />
+                  <button className="text-[var(--accent)] font-medium" onClick={savePorts}>{t('save')}</button>
+                  <button onClick={() => setPortsDraft(null)}>{t('cancel')}</button>
+                </>
+              ) : (
+                <button className="hover:text-[var(--text)]" onClick={() => setPortsDraft(ports)} title={t('changePorts')}>
+                  {t('ports')}: HTTP {ports.http} · SOCKS {ports.socks} ✎
+                </button>
+              )}
+            </div>
+          )}
+
           {platform === 'windows' && !isRunning && (
             <label className="flex items-center gap-2 text-xs text-[var(--text-dim)] cursor-pointer select-none">
               <input
@@ -1610,7 +1657,7 @@ export default function App() {
             )}
             {isRunning && (
               <div className="text-xs text-[var(--text-faint)] mt-1">
-                {status.mode === 'tun' ? t('tunAdapterAllTraffic') : 'HTTP 127.0.0.1:2080 · SOCKS5 127.0.0.1:2081'}
+                {status.mode === 'tun' ? t('tunAdapterAllTraffic') : `HTTP 127.0.0.1:${ports.http} · SOCKS5 127.0.0.1:${ports.socks}`}
               </div>
             )}
           </div>

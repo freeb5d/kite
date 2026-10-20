@@ -11,6 +11,8 @@ export const LANGUAGES = [
 
 const dict = {
   en: {
+    ports: "Ports",
+    changePorts: "Change local proxy ports",
     support: "Support",
     importClipboard: "Import from clipboard",
     clipboardEmpty: "Clipboard is empty",
@@ -143,6 +145,8 @@ const dict = {
     updateFailed: (msg) => `Update failed: ${msg}`,
   },
   zh: {
+    ports: "端口",
+    changePorts: "修改本地代理端口",
     support: "客服",
     importClipboard: "从剪贴板导入",
     clipboardEmpty: "剪贴板为空",
@@ -275,6 +279,8 @@ const dict = {
     updateFailed: (msg) => `更新失败：${msg}`,
   },
   fa: {
+    ports: "پورت‌ها",
+    changePorts: "تغییر پورت‌های پروکسی محلی",
     support: "پشتیبانی",
     importClipboard: "افزودن از کلیپ‌بورد",
     clipboardEmpty: "کلیپ‌بورد خالی است",
@@ -407,6 +413,8 @@ const dict = {
     updateFailed: (msg) => `به‌روزرسانی ناموفق بود: ${msg}`,
   },
   tr: {
+    ports: "Portlar",
+    changePorts: "Yerel proxy portlarını değiştir",
     support: "Destek",
     importClipboard: "Panodan içe aktar",
     clipboardEmpty: "Pano boş",
@@ -539,6 +547,8 @@ const dict = {
     updateFailed: (msg) => `Güncelleme başarısız: ${msg}`,
   },
   ar: {
+    ports: "المنافذ",
+    changePorts: "تغيير منافذ الوكيل المحلي",
     support: "الدعم",
     importClipboard: "استيراد من الحافظة",
     clipboardEmpty: "الحافظة فارغة",
@@ -671,6 +681,8 @@ const dict = {
     updateFailed: (msg) => `فشل التحديث: ${msg}`,
   },
   fr: {
+    ports: "Ports",
+    changePorts: "Modifier les ports du proxy local",
     support: "Assistance",
     importClipboard: "Importer depuis le presse-papiers",
     clipboardEmpty: "Le presse-papiers est vide",
@@ -803,6 +815,8 @@ const dict = {
     updateFailed: (msg) => `Échec de la mise à jour : ${msg}`,
   },
   de: {
+    ports: "Ports",
+    changePorts: "Lokale Proxy-Ports ändern",
     support: "Support",
     importClipboard: "Aus Zwischenablage importieren",
     clipboardEmpty: "Zwischenablage ist leer",
@@ -935,6 +949,8 @@ const dict = {
     updateFailed: (msg) => `Update fehlgeschlagen: ${msg}`,
   },
   ru: {
+    ports: "Порты",
+    changePorts: "Изменить порты локального прокси",
     support: "Поддержка",
     importClipboard: "Импорт из буфера обмена",
     clipboardEmpty: "Буфер обмена пуст",

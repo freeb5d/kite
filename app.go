@@ -350,6 +350,19 @@ func (a *App) RenameProfile(id string, name string) (profile.Server, error) {
 // (which is how xray itself reaches the VPN server) and loopback while
 // connected -- see internal/system/killswitch_windows.go. It's currently
 // Windows-only and needs the same elevation as TUN mode.
+// Ports returns the local proxy ports {http, socks}.
+func (a *App) Ports() map[string]int {
+	return map[string]int{"http": xray.HTTPInboundPort, "socks": xray.SOCKSInboundPort}
+}
+
+// SetPorts changes the local proxy ports (used from the next connection).
+func (a *App) SetPorts(http, socks int) error {
+	if a.manager.Status().State == xray.StateRunning {
+		return fmt.Errorf("disconnect first to change the ports")
+	}
+	return xray.SetPorts(http, socks)
+}
+
 func (a *App) Connect(serverID string, mode string, killSwitch bool) error {
 	server, err := a.store.Get(serverID)
 	if err != nil {
