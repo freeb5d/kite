@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.24.1 — TUN reconnect fix
+
+- Fixed "initialization has already been completed" after reconnecting a few times in TUN
+  mode. xray-core keeps each TUN adapter open until Kite exits, so Kite again uses a new
+  adapter for every connection (they are all released when Kite closes).
+
 ## 🔧 v0.24.0 — Custom proxy ports
 
 - The local proxy ports (HTTP 2080, SOCKS 2081 by default) can now be changed: in Proxy

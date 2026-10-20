@@ -99,11 +99,13 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 		}
 	}
 
-	// Adapter names come from a small fixed pool: xray doesn't always
-	// release an adapter on Close right away, and reopening one that is
-	// still held fails with "initialization has already been completed" --
-	// so each attempt below moves on to the next name. A fixed pool keeps
-	// Windows from accumulating a new network adapter on every connect.
+	// A fresh adapter name per attempt: xray-core never closes its Wintun
+	// session on Close (the tun handler drops the reference), so a name
+	// once used stays held until Kite exits, and reopening it fails with
+	// "initialization has already been completed". Windows frees the
+	// adapters when the process exits, so names restart at 1 next launch.
+	// ponytail: leaks one adapter per connect within a session; hot-swapping
+	// the outbound on server switch would avoid recreating the TUN at all.
 	var tunName, tunAddr string
 
 	// SSH servers go through a local SOCKS-to-SSH bridge; it dials the
@@ -127,13 +129,13 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 
 	attempts := 1
 	if mode == ModeTUN {
-		attempts = tunSlots + 1
+		attempts = 3
 	}
 	var instance *core.Instance
 	var err error
 	for attempt := 1; attempt <= attempts; attempt++ {
 		m.tunSeq++
-		slot := m.tunSeq%tunSlots + 1
+		slot := m.tunSeq
 		tunName = fmt.Sprintf("kite-tun-%d", slot)
 		tunAddr = TUNAddress(slot)
 		configBytes, berr := buildJSON(server, mode, tunName, bridgePort)
@@ -301,12 +303,8 @@ func (m *Manager) Traffic() Traffic {
 	return t
 }
 
-// tunSlots is the size of the TUN adapter name pool (kite-tun-1..4).
-const tunSlots = 4
-
-// TUNAddress is the address of TUN adapter slot n; each slot has its own,
-// since a lingering adapter from an earlier connection may still hold
-// another one.
+// TUNAddress is the address of the n-th TUN adapter; each has its own,
+// since adapters from earlier connections linger until Kite exits.
 func TUNAddress(n int) string {
 	return fmt.Sprintf("172.19.%d.1", n%250)
 }
