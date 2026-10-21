@@ -3,6 +3,12 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.25.1 — Crash fix in TUN mode
+
+- Fixed Kite crashing during long sessions in TUN mode. A bug in xray-core's UDP handling
+  ("send on closed channel") was hit often once QUIC got blocked, as video apps retry it
+  several times a second. Kite now ships xray-core with that bug fixed.
+
 ## 🔀 v0.25.0 — Instant server switch in TUN mode
 
 - Switching servers while connected in TUN mode now keeps the tunnel running and only

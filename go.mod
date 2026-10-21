@@ -71,3 +71,7 @@ require (
 	gvisor.dev/gvisor v0.0.0-20260122175437-89a5d21be8f0 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )
+
+// v1.260327.0 with a crash fix in its TUN UDP handler (see udp_fullcone.go).
+// Newer upstream releases have the fix but reject VLESS/Trojan without TLS.
+replace github.com/xtls/xray-core => ./third_party/xray-core
