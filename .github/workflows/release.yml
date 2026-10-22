@@ -50,7 +50,10 @@ jobs:
         run: |
           # Short per-request timeouts + retries: a stalled Ubuntu mirror
           # otherwise hangs the whole step.
-          APT="-o Acquire::Retries=5 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20"
+          export DEBIAN_FRONTEND=noninteractive
+          # Ubuntu's own background updates can hold the dpkg lock for ages.
+          sudo systemctl stop unattended-upgrades apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+          APT="-o Acquire::Retries=5 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o DPkg::Lock::Timeout=300"
           sudo apt-get $APT update
           sudo apt-get $APT install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential pkg-config
 
