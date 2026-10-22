@@ -55,11 +55,16 @@ func newServiceClient(streamSettings *internet.MemoryStreamConfig, timeout time.
 			}
 		}
 
-		var conn net.Conn
-		if streamSettings.FinalMask != nil {
-			conn, err = streamSettings.FinalMask.DialTCP(ctx, target)
-		} else {
-			conn, err = internet.DialSystem(ctx, target, sockopt)
+		// Kite backport: this xray-core version exposes TCP masks as
+		// TcpmaskManager (wraps a dialed conn) rather than FinalMask.DialTCP.
+		conn, err := internet.DialSystem(ctx, target, sockopt)
+		if err == nil && streamSettings != nil && streamSettings.TcpmaskManager != nil {
+			if wrapped, werr := streamSettings.TcpmaskManager.WrapConnClient(conn); werr != nil {
+				conn.Close()
+				err = werr
+			} else {
+				conn = wrapped
+			}
 		}
 		if err != nil {
 			return nil, host, errors.New("failed to dial to dest").Base(err)
