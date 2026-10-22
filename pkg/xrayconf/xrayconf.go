@@ -135,6 +135,15 @@ func Build(server profile.Server, o Options) ([]byte, error) {
 
 // Outbound builds the "proxy" outbound for server.
 func Outbound(server profile.Server) (map[string]interface{}, error) {
+	// Imported verbatim (transports Kite doesn't model, e.g. XDrive).
+	if raw := server.Extra["raw"]; raw != "" {
+		var o map[string]interface{}
+		if err := json.Unmarshal([]byte(raw), &o); err != nil {
+			return nil, fmt.Errorf("stored outbound: %w", err)
+		}
+		o["tag"] = "proxy"
+		return o, nil
+	}
 	outbound := map[string]interface{}{"tag": "proxy"}
 
 	switch server.Protocol {

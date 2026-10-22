@@ -929,6 +929,13 @@ export default function App() {
       if (added.length > 0) setSelectedId(added[added.length - 1].id)
       return added.length
     }
+    // A pasted Xray JSON config (e.g. XDrive, which has no share link).
+    if (/^[\[{]/.test(value)) {
+      const server = await AddProfileFromLink(value)
+      setServers((prev) => [...prev, server])
+      setSelectedId(server.id)
+      return 1
+    }
     const links = value.split(/\s+/).filter((l) => l.includes('://'))
     if (links.length === 0) throw new Error(t('clipboardNoLinks'))
     const added = []

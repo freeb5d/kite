@@ -40,6 +40,8 @@ func ParseLink(link string) (Server, error) {
 		return parseHysteria2(link)
 	case strings.HasPrefix(link, "ssh://"):
 		return parseSSH(link)
+	case strings.HasPrefix(link, "{"), strings.HasPrefix(link, "["):
+		return parseConfigJSON(link)
 	default:
 		return Server{}, fmt.Errorf("unsupported or unrecognized link format")
 	}

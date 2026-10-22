@@ -104,3 +104,19 @@ func TestTransports(t *testing.T) {
 		}
 	}
 }
+
+func TestXDriveRawOutbound(t *testing.T) {
+	raw := `{"protocol":"vless","settings":{"vnext":[{"address":"a.example","port":20888,"users":[{"id":"796c0546-0a57-8b90-8f4e-99db3e3b5bbe","encryption":"none"}]}]},"streamSettings":{"network":"xdrive","security":"none","xdriveSettings":{"service":"Google Drive","remoteFolder":"F","secrets":["a","b","c"],"segmentBytes":524288}}}`
+	s := profile.Server{Protocol: "vless", Address: "a.example", Port: 20888, Extra: map[string]string{"raw": raw}}
+	cfg, err := Build(s, Options{SOCKSPort: 1080})
+	if err != nil {
+		t.Fatal(err)
+	}
+	config, err := serial.LoadJSONConfig(bytes.NewReader(cfg))
+	if err != nil {
+		t.Fatalf("xray rejected config: %v\n%s", err, cfg)
+	}
+	if _, err := core.New(config); err != nil {
+		t.Fatalf("core.New: %v\n%s", err, cfg)
+	}
+}

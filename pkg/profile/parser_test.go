@@ -3,6 +3,7 @@ package profile
 import (
 	"net/http"
 	"encoding/base64"
+	"strings"
 	"testing"
 )
 
@@ -204,5 +205,30 @@ func TestSupportURL(t *testing.T) {
 	h.Set("Support-URL", "javascript:alert(1)")
 	if got := SupportURL(h); got != "" {
 		t.Fatalf("unsafe scheme accepted: %q", got)
+	}
+}
+
+func TestXDriveJSONImport(t *testing.T) {
+	body := `{"outbounds":[{"tag":"x","protocol":"vless","settings":{"vnext":[{"address":"a.example","port":20888,"users":[{"id":"796c0546-0a57-8b90-8f4e-99db3e3b5bbe","encryption":"none"}]}]},
+	"streamSettings":{"network":"xdrive","security":"none","xdriveSettings":{"service":"Google Drive","remoteFolder":"F","secrets":["a","b","c"],
+	"front":{"address":"[www.googleapis.com](https://www.googleapis.com)","port":443},"tuning":{"segmentBytes":524288,"pollIntervalMs":50}}}}]}`
+	s, err := ParseLink(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := s.Extra["raw"]
+	if s.Protocol != "vless" || s.Address != "a.example" || raw == "" {
+		t.Fatalf("unexpected %+v", s)
+	}
+	for _, want := range []string{`"segmentBytes":524288`, `"address":"www.googleapis.com"`} {
+		if !strings.Contains(raw, want) {
+			t.Fatalf("raw missing %s: %s", want, raw)
+		}
+	}
+	if strings.Contains(raw, "tuning") || strings.Contains(raw, "front") {
+		t.Fatalf("panel layout not normalized: %s", raw)
+	}
+	if link, _ := ShareLink(s); strings.Contains(link, "raw=") {
+		t.Fatalf("raw leaked into share link: %s", link)
 	}
 }

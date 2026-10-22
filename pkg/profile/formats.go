@@ -27,7 +27,8 @@ func parseStructured(body string) (servers []Server, errs []error, ok bool) {
 		}
 		for _, o := range doc.Outbounds {
 			if _, isXray := o["protocol"]; isXray {
-				add(fromXray(o))
+				s, err := fromXray(o)
+				add(keepRaw(o, s, err))
 			} else {
 				add(fromSingBox(o))
 			}

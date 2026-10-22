@@ -3,6 +3,18 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🗂️ v0.26.0 — XDrive and JSON configs
+
+- **XDrive transport** — Kite's xray-core now includes XDrive (traffic relayed through a
+  cloud drive such as Google Drive), taken from the newer upstream xray-core. Kite keeps the
+  version that still accepts VLESS/Trojan without TLS.
+- **Paste a JSON config** — an Xray JSON config can be pasted into the add box (or imported
+  from the clipboard). Outbounds using transports Kite doesn't edit itself, like XDrive, are
+  kept exactly as given. Both xray's own layout and the panel layout (`tuning`, `front`) are
+  accepted.
+- XDrive works in Proxy mode; in TUN mode on Windows its cloud-drive traffic isn't routed
+  around the tunnel yet.
+
 ## 🐛 v0.25.1 — Crash fix in TUN mode
 
 - Fixed Kite crashing during long sessions in TUN mode. A bug in xray-core's UDP handling
