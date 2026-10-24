@@ -3,6 +3,11 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.26.1 — Apps failing over IPv6
+
+- In TUN mode, Kite's DNS now answers with IPv4 addresses only. Most servers have no IPv6, so
+  apps that prefer it (YouTube, Google) failed to connect even though the VPN worked.
+
 ## 🗂️ v0.26.0 — XDrive and JSON configs
 
 - **XDrive transport** — Kite's xray-core now includes XDrive (traffic relayed through a

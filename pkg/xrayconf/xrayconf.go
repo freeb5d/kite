@@ -116,7 +116,9 @@ func Build(server profile.Server, o Options) ([]byte, error) {
 		config["outbounds"] = append(config["outbounds"].([]map[string]interface{}),
 			map[string]interface{}{"tag": "dns-out", "protocol": "dns"},
 			map[string]interface{}{"tag": "block", "protocol": "blackhole"})
-		config["dns"] = map[string]interface{}{"servers": servers}
+		// IPv4 answers only: most proxy servers have no IPv6, and apps that
+		// prefer IPv6 (YouTube, Google) would otherwise fail their handshakes.
+		config["dns"] = map[string]interface{}{"servers": servers, "queryStrategy": "UseIPv4"}
 		rules := []map[string]interface{}{
 			{"type": "field", "network": "udp", "port": "53", "outboundTag": "dns-out"},
 			// Block QUIC (HTTP/3 over UDP 443): browsers fall back to TCP at
