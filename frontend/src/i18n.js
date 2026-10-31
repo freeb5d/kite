@@ -11,6 +11,10 @@ export const LANGUAGES = [
 
 const dict = {
   en: {
+    copy: "Copy",
+    showQr: "Show QR code",
+    qrHint: "Scan with another device to import.",
+    qrTooLong: "Too long for a QR code — copy the link instead.",
     ports: "Ports",
     changePorts: "Change local proxy ports",
     support: "Support",
@@ -145,6 +149,10 @@ const dict = {
     updateFailed: (msg) => `Update failed: ${msg}`,
   },
   zh: {
+    copy: "复制",
+    showQr: "显示二维码",
+    qrHint: "用另一台设备扫描即可导入。",
+    qrTooLong: "内容太长，无法生成二维码——请改为复制链接。",
     ports: "端口",
     changePorts: "修改本地代理端口",
     support: "客服",
@@ -279,6 +287,10 @@ const dict = {
     updateFailed: (msg) => `更新失败：${msg}`,
   },
   fa: {
+    copy: "کپی",
+    showQr: "نمایش کد QR",
+    qrHint: "با یک دستگاه دیگر اسکن کنید تا اضافه شود.",
+    qrTooLong: "برای کد QR خیلی طولانی است — لینک را کپی کنید.",
     ports: "پورت‌ها",
     changePorts: "تغییر پورت‌های پروکسی محلی",
     support: "پشتیبانی",
@@ -413,6 +425,10 @@ const dict = {
     updateFailed: (msg) => `به‌روزرسانی ناموفق بود: ${msg}`,
   },
   tr: {
+    copy: "Kopyala",
+    showQr: "QR kodunu göster",
+    qrHint: "İçe aktarmak için başka bir cihazla tarayın.",
+    qrTooLong: "QR kod için çok uzun — bunun yerine bağlantıyı kopyalayın.",
     ports: "Portlar",
     changePorts: "Yerel proxy portlarını değiştir",
     support: "Destek",
@@ -547,6 +563,10 @@ const dict = {
     updateFailed: (msg) => `Güncelleme başarısız: ${msg}`,
   },
   ar: {
+    copy: "نسخ",
+    showQr: "عرض رمز QR",
+    qrHint: "امسحه بجهاز آخر لاستيراده.",
+    qrTooLong: "طويل جدًا لرمز QR — انسخ الرابط بدلًا من ذلك.",
     ports: "المنافذ",
     changePorts: "تغيير منافذ الوكيل المحلي",
     support: "الدعم",
@@ -681,6 +701,10 @@ const dict = {
     updateFailed: (msg) => `فشل التحديث: ${msg}`,
   },
   fr: {
+    copy: "Copier",
+    showQr: "Afficher le QR code",
+    qrHint: "Scannez-le avec un autre appareil pour l’importer.",
+    qrTooLong: "Trop long pour un QR code — copiez plutôt le lien.",
     ports: "Ports",
     changePorts: "Modifier les ports du proxy local",
     support: "Assistance",
@@ -815,6 +839,10 @@ const dict = {
     updateFailed: (msg) => `Échec de la mise à jour : ${msg}`,
   },
   de: {
+    copy: "Kopieren",
+    showQr: "QR-Code anzeigen",
+    qrHint: "Mit einem anderen Gerät scannen, um zu importieren.",
+    qrTooLong: "Zu lang für einen QR-Code – kopiere stattdessen den Link.",
     ports: "Ports",
     changePorts: "Lokale Proxy-Ports ändern",
     support: "Support",
@@ -949,6 +977,10 @@ const dict = {
     updateFailed: (msg) => `Update fehlgeschlagen: ${msg}`,
   },
   ru: {
+    copy: "Копировать",
+    showQr: "Показать QR-код",
+    qrHint: "Отсканируйте другим устройством, чтобы импортировать.",
+    qrTooLong: "Слишком длинно для QR-кода — скопируйте ссылку.",
     ports: "Порты",
     changePorts: "Изменить порты локального прокси",
     support: "Поддержка",

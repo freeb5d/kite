@@ -3,6 +3,11 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🔳 v0.27.0 — QR codes for sharing
+
+- Sharing a server now also shows its QR code (the link is still copied), so another device
+  can import it by scanning. Subscriptions get **Show QR code** in their share menu.
+
 ## 🐛 v0.26.1 — Apps failing over IPv6
 
 - In TUN mode, Kite's DNS now answers with IPv4 addresses only. Most servers have no IPv6, so
