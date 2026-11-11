@@ -186,6 +186,11 @@ func (h *AlwaysOnInboundHandler) Close() error {
 		errs = append(errs, worker.Close())
 	}
 	errs = append(errs, h.mux.Close())
+	// Workers close the proxy they serve; a proxy without workers (TUN)
+	// would otherwise never be closed and keep its adapter open.
+	if len(h.workers) == 0 {
+		errs = append(errs, common.Close(h.proxy))
+	}
 	if err := errors.Combine(errs...); err != nil {
 		return errors.New("failed to close all resources").Base(err)
 	}

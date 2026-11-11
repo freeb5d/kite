@@ -3,6 +3,11 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
+## 🐛 v0.27.1 — One TUN adapter
+
+- TUN mode no longer leaves a new network adapter behind on every connect or server
+  switch: the adapter is now removed on disconnect and the same one is reused.
+
 ## 🔳 v0.27.0 — QR codes for sharing
 
 - Sharing a server now also shows its QR code (the link is still copied), so another device

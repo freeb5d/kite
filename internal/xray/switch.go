@@ -21,9 +21,8 @@ import (
 var ErrCannotSwitch = errors.New("cannot switch in place")
 
 // Switch moves a running TUN connection to another server without
-// recreating the TUN adapter: only xray's "proxy" outbound is replaced.
-// (xray-core never releases a Wintun adapter on Close, so a full
-// reconnect costs one adapter every time.) SSH servers need a different
+// recreating the TUN adapter: only xray's "proxy" outbound is replaced,
+// so open apps don't see the network drop. SSH servers need a different
 // DNS setup and their own bridge, so they always reconnect fully.
 func (m *Manager) Switch(server profile.Server) error {
 	m.mu.Lock()

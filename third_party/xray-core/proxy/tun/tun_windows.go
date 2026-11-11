@@ -5,6 +5,7 @@ package tun
 import (
 	"crypto/md5"
 	"errors"
+	"sync"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -26,7 +27,15 @@ type WindowsTun struct {
 	session  wintun.Session
 	readWait windows.Handle
 	MTU      uint32
+
+	// mu guards the session against use after Close: the ip stack may
+	// still read, write or release packets while it winds down.
+	mu        sync.RWMutex
+	closed    bool
+	closeWait windows.Handle
 }
+
+var errTunClosed = errors.New("tun closed")
 
 // WindowsTun implements Tun
 var _ Tun = (*WindowsTun)(nil)
@@ -53,11 +62,19 @@ func NewTun(options TunOptions) (Tun, error) {
 		return nil, err
 	}
 
+	closeWait, err := windows.CreateEvent(nil, 1, 0, nil)
+	if err != nil {
+		session.End()
+		_ = adapter.Close()
+		return nil, err
+	}
+
 	tun := &WindowsTun{
-		options:  options,
-		adapter:  adapter,
-		session:  session,
-		readWait: session.ReadWaitEvent(),
+		closeWait: closeWait,
+		options:   options,
+		adapter:   adapter,
+		session:   session,
+		readWait:  session.ReadWaitEvent(),
 		// there is currently no iphndl.dll support, which is the netlink library for windows
 		// so there is nowhere to change MTU for the Wintun interface, and we take its default value
 		MTU: wintun.PacketSizeMax,
@@ -88,6 +105,14 @@ func (t *WindowsTun) Start() error {
 }
 
 func (t *WindowsTun) Close() error {
+	// wake the reader out of Wait before taking the session away
+	_ = windows.SetEvent(t.closeWait)
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.closed {
+		return nil
+	}
+	t.closed = true
 	t.session.End()
 	_ = t.adapter.Close()
 
@@ -96,6 +121,11 @@ func (t *WindowsTun) Close() error {
 
 // WritePacket implements GVisorDevice method to write one packet to the tun device
 func (t *WindowsTun) WritePacket(packetBuffer *stack.PacketBuffer) tcpip.Error {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if t.closed {
+		return &tcpip.ErrAborted{}
+	}
 	// request buffer from Wintun
 	packet, err := t.session.AllocateSendPacket(packetBuffer.Size())
 	if err != nil {
@@ -118,7 +148,13 @@ func (t *WindowsTun) WritePacket(packetBuffer *stack.PacketBuffer) tcpip.Error {
 // It is expected that the method will not block, rather return ErrQueueEmpty when there is nothing on the line,
 // which will make the stack call Wait which should implement desired push-back
 func (t *WindowsTun) ReadPacket() (byte, *stack.PacketBuffer, error) {
+	t.mu.RLock()
+	if t.closed {
+		t.mu.RUnlock()
+		return 0, nil, errTunClosed
+	}
 	packet, err := t.session.ReceivePacket()
+	t.mu.RUnlock()
 	if errors.Is(err, windows.ERROR_NO_MORE_ITEMS) {
 		return 0, nil, ErrQueueEmpty
 	}
@@ -132,14 +168,18 @@ func (t *WindowsTun) ReadPacket() (byte, *stack.PacketBuffer, error) {
 		Payload:           packetBuffer,
 		IsForwardedPacket: true,
 		OnRelease: func() {
-			t.session.ReleaseReceivePacket(packet)
+			t.mu.RLock()
+			defer t.mu.RUnlock()
+			if !t.closed {
+				t.session.ReleaseReceivePacket(packet)
+			}
 		},
 	}), nil
 }
 
 func (t *WindowsTun) Wait() {
 	procyield(1)
-	_, _ = windows.WaitForSingleObject(t.readWait, windows.INFINITE)
+	_, _ = windows.WaitForMultipleObjects([]windows.Handle{t.readWait, t.closeWait}, false, windows.INFINITE)
 }
 
 func (t *WindowsTun) newEndpoint() (stack.LinkEndpoint, error) {

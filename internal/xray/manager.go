@@ -99,13 +99,10 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 		}
 	}
 
-	// A fresh adapter name per attempt: xray-core never closes its Wintun
-	// session on Close (the tun handler drops the reference), so a name
-	// once used stays held until Kite exits, and reopening it fails with
-	// "initialization has already been completed". Windows frees the
-	// adapters when the process exits, so names restart at 1 next launch.
-	// ponytail: leaks one adapter per connect within a session; hot-swapping
-	// the outbound on server switch would avoid recreating the TUN at all.
+	// The same adapter name is reused across connections: the vendored
+	// xray-core releases its Wintun adapter on Close. Only when an adapter
+	// can't be opened (still held, half-removed by Windows, ...) does the
+	// retry below move on to the next name.
 	var tunName, tunAddr string
 
 	// SSH servers go through a local SOCKS-to-SSH bridge; it dials the
@@ -134,8 +131,7 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 	var instance *core.Instance
 	var err error
 	for attempt := 1; attempt <= attempts; attempt++ {
-		m.tunSeq++
-		slot := m.tunSeq
+		slot := m.tunSeq + 1
 		tunName = fmt.Sprintf("kite-tun-%d", slot)
 		tunAddr = TUNAddress(slot)
 		configBytes, berr := buildJSON(server, mode, tunName, bridgePort)
@@ -159,6 +155,7 @@ func (m *Manager) start(server profile.Server, mode Mode) error {
 		if err == nil || attempt == attempts || mode != ModeTUN || missingTUNDLL() {
 			break
 		}
+		m.tunSeq++
 		time.Sleep(500 * time.Millisecond)
 	}
 	if err != nil {
@@ -303,8 +300,8 @@ func (m *Manager) Traffic() Traffic {
 	return t
 }
 
-// TUNAddress is the address of the n-th TUN adapter; each has its own,
-// since adapters from earlier connections linger until Kite exits.
+// TUNAddress is the address of the n-th TUN adapter name; each has its
+// own, in case an adapter that couldn't be reused still lingers.
 func TUNAddress(n int) string {
 	return fmt.Sprintf("172.19.%d.1", n%250)
 }

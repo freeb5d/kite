@@ -23,6 +23,7 @@ type Handler struct {
 	ctx             context.Context
 	config          *Config
 	stack           Stack
+	tun             Tun
 	policyManager   policy.Manager
 	dispatcher      routing.Dispatcher
 	tag             string
@@ -95,8 +96,20 @@ func (t *Handler) Init(ctx context.Context, pm policy.Manager, dispatcher routin
 	}
 
 	t.stack = tunStack
+	t.tun = tunInterface
 
 	errors.LogInfo(t.ctx, tunName, " up")
+	return nil
+}
+
+// Close shuts down the ip stack and releases the tun interface.
+func (t *Handler) Close() error {
+	if t.stack != nil {
+		_ = t.stack.Close()
+	}
+	if t.tun != nil {
+		return t.tun.Close()
+	}
 	return nil
 }
 
