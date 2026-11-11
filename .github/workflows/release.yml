@@ -23,10 +23,10 @@ jobs:
             platform: linux/amd64
             artifact: kite-linux-amd64
             binpath: build/bin/kite
-          # macos-14 (Apple Silicon) instead of macos-13: much shorter
+          # macos-15 (Apple Silicon) instead of macos-13: much shorter
           # GitHub queue times, and Apple Silicon is what most current Mac
           # users actually have.
-          - os: macos-14
+          - os: macos-15
             platform: darwin/arm64
             artifact: kite-macos-arm64
             binpath: build/bin/kite.app/Contents/MacOS/kite
@@ -117,7 +117,7 @@ jobs:
           path: kite-windows-amd64-setup.exe
 
       - name: Build (macOS)
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macos-15'
         run: wails build -platform ${{ matrix.platform }} -ldflags "-X main.version=${{ steps.version.outputs.value }}" -clean
 
       - name: Rename binary

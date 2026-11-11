@@ -3,7 +3,7 @@
 All notable changes to Kite are documented here. Versions correspond to
 [GitHub Releases](https://github.com/freeb5d/kite/releases).
 
-## 🐛 v0.27.1 — One TUN adapter
+## 🐛 v0.27.2 — One TUN adapter
 
 - TUN mode no longer leaves a new network adapter behind on every connect or server
   switch: the adapter is now removed on disconnect and the same one is reused.
